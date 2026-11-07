@@ -3,24 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Byen vår</title>
+<title>Klassebyen – klassen bygger sin egen by</title>
+<meta name="description" content="Klassebyen: elevene bygger sin egen by i Minecraft Education og lærer om økonomi, demokrati og samarbeid.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/stil.css">
+<link rel="preload" as="image" href="bilder/hero.jpg">
+<link rel="stylesheet" href="css/forside.css">
 </head>
 <body>
-<header class="topp">
-  <div><div class="logo"><span id="logoIkon"></span><span>Byen vår</span></div><div class="undertittel">Bygg, bo og bestem i Minecraft Education</div></div>
-</header>
-<div class="innlogging" style="max-width:560px">
-  <div class="kort" style="text-align:center">
-    <h1 style="color:var(--jord-mork)">Velkommen!</h1>
-    <p>Er du <b>elev</b>? Bruk lenken eller QR-koden du har fått av læreren din.</p>
-    <p style="margin:22px 0"><a class="knapp" href="laerer.html">Jeg er lærer</a></p>
-    <p class="dempet">Lærere oppretter klasser og deler en egen elevlenke med hver klasse.</p>
+
+<header class="hero">
+  <img class="scene" src="bilder/hero.jpg" srcset="bilder/hero-liten.jpg 1280w, bilder/hero.jpg 2560w" sizes="100vw" alt="En liten by bygget av klosser, med hus i ulike farger, rådhus, butikk, brannstasjon, svømmebasseng og dam.">
+  <div class="innhold">
+    <h1>Klassebyen</h1>
+    <p class="ingress">Klassen flytter inn i sin egen by i Minecraft Education. Elevene tegner hus, handler materialer, får jobb, betaler skatt og stemmer over nye lover – akkurat som i virkeligheten.</p>
+    <div class="handlinger">
+      <a class="knapp" href="laerer.html">Til lærersiden</a>
+      <span class="elevtips">Elev? Skann QR-koden eller bruk lenken fra læreren din.</span>
+    </div>
   </div>
-</div>
-<script src="js/data.js"></script><script src="js/ikoner.js"></script>
-<script>document.getElementById('logoIkon').innerHTML = Ikon.mc('birch_planks');</script>
+</header>
+<div class="gresskant" aria-hidden="true"></div>
+
+<main>
+  <section class="seksjon" aria-labelledby="vei-tittel">
+    <h2 id="vei-tittel">Slik blir du innbygger i byen</h2>
+    <p class="ledetekst">Dere er to og to i hver husholdning. Alt dere gjør i portalen, får følger i Minecraft – og omvendt.</p>
+    <ol class="vei">
+      <li><span class="stein" aria-hidden="true">1</span><div><h3>Signer avtalen</h3><p>Dere får en startbonus til huset og bestemmer om dere vil ha forsikring og tippe lotto.</p></div></li>
+      <li><span class="stein" aria-hidden="true">2</span><div><h3>Tegn huset</h3><p>Tegn plantegningen rute for rute, se huset fra alle sider og i 3D, og send byggesøknad. Kommunen sjekker at dere følger reglene.</p></div></li>
+      <li><span class="stein" aria-hidden="true">3</span><div><h3>Regn ut hva dere trenger</h3><p>Hvor mange blokker blir veggene? Hvor mange glassruter? Regn selv først – etterpå får dere se hvor nær dere var.</p></div></li>
+      <li><span class="stein" aria-hidden="true">4</span><div><h3>Bestill og bygg</h3><p>Handle i byggevarehandelen og regn ut totalen. Neste gang dere spiller, ligger varene i kisten på tomta.</p></div></li>
+      <li><span class="stein" aria-hidden="true">5</span><div><h3>Søk jobb</h3><p>Politi, sykehus, matbutikk eller restaurant? Skriv tre gode grunner til at akkurat du passer.</p></div></li>
+      <li><span class="stein" aria-hidden="true">6</span><div><h3>Hold styr på pengene</h3><p>Lønn, skatt, fakturaer og uventede hendelser. Før regnskap, lag budsjett og sjekk at det stemmer med banken.</p></div></li>
+      <li><span class="stein" aria-hidden="true">7</span><div><h3>Bestem i bystyret</h3><p>Vil dere ha kjæledyr eller høyere hus? Skriv lovforslag, samle støtte og stem over dem i klassen.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="ferdigheter" aria-labelledby="ferdighet-tittel">
+    <div class="seksjon">
+      <div>
+        <h2 id="ferdighet-tittel" style="font-size:clamp(34px,4.6vw,52px);color:var(--jord-mork);line-height:1.05">Det elevene øver på</h2>
+        <p style="color:var(--dempet);margin-top:14px;max-width:40ch">Kompetansemål etter 7. trinn i læreplanene som gjelder fra høsten 2026. Lærere finner hele oversikten, med forslag til hvor målene dekkes, på lærersiden.</p>
+      </div>
+      <dl>
+        <dt>Matematikk</dt><dd>Gjøre overslag og vurdere løsninger i arbeid med økonomi, regne med prosent, lage og løse sammensatte regneuttrykk – og areal og omkrets når huset tegnes.</dd>
+        <dt>Samfunnsfag</dt><dd>Hva lover og regler er til for og hva som skjer når de brytes, hvordan man kan påvirke i et demokrati, og hvordan fristende tilbud virker inn på forbruk og personlig økonomi.</dd>
+        <dt>Norsk</dt><dd>Argumentere skriftlig i jobbsøknader og lovforslag, og lytte til andre og begrunne egne standpunkter i bystyret.</dd>
+        <dt>Engelsk og kunst og håndverk</dt><dd>Brev til grandonkelen i Amerika, og digital planlegging og tegning av huset i plan, fasade og 3D.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="seksjon laerer" aria-labelledby="laerer-tittel">
+    <div>
+      <h2 id="laerer-tittel" style="font-size:clamp(34px,4.6vw,52px);color:var(--jord-mork);line-height:1.05">For deg som lærer</h2>
+      <p style="color:var(--dempet);margin-top:14px;max-width:52ch">Papirene, konvoluttene og kistefyllingen tar portalen seg av. Du bruker tiden på elevene.</p>
+      <ul>
+        <li>Opprett klassen, del en lenke eller QR-kode, og skriv ut PIN-lapper.</li>
+        <li>Godkjenn byggesøknader og bestillinger – fakturaene lages automatisk.</li>
+        <li>Lim inn ett lite program i Code Builder, så fylles alle kistene i byen.</li>
+        <li>Kjør ukeoppgjør, trekk hendelseskort og lotto på tavla med ett klikk.</li>
+      </ul>
+      <a class="knapp" href="laerer.html">Opprett en klasse</a>
+    </div>
+    <figure class="kiste" style="margin:0">
+      <div class="ruter" id="kisteruter"></div>
+      <figcaption>En levering: alt husholdningen bestilte, rett i kisten på tomta.</figcaption>
+    </figure>
+  </section>
+</main>
+
+<footer>
+  <div class="seksjon">
+    <p>Klassebyen bygger på «Byen vår», et opplegg som først ble prøvd ut med en 5. klasse. Laget av en lærer, for klasserommet.</p>
+    <p>Klassebyen er ikke tilknyttet Minecraft, Mojang eller Microsoft.</p>
+  </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/ikoner.js"></script>
+<script>
+  // Eksempel på en kiste med varer (egne pikselikoner)
+  const ting = ['birch_planks', 'birch_planks', 'cherry_door', 'glass_pane', 'bed', 'lantern', 'red_candle', 'chest', 'bookshelf', 'red_tulip', 'oak_sapling', 'emerald'];
+  document.getElementById('kisteruter').innerHTML = ting.map(mc => `<div class="rute">${Ikon.mc(mc, 14)}</div>`).join('');
+</script>
 </body>
 </html>

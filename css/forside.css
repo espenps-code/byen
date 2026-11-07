@@ -1,0 +1,95 @@
+/* =========================================================
+   KLASSEBYEN – forside
+   ========================================================= */
+:root {
+  --himmel: #6fbff0; --gress: #5aa832; --gress-mork: #3d7a1f; --jord: #7a4f2a; --jord-mork: #523319;
+  --stein: #8c8f94; --sol: #ffcc33; --blekk: #2b2418; --papir: #fffdf8; --dempet: #6b6152;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; } }
+body { margin: 0; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; color: var(--blekk); background: var(--papir); font-size: 18px; line-height: 1.55; }
+h1, h2, h3 { font-family: 'Lilita One', sans-serif; font-weight: 400; letter-spacing: .3px; margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--sol); outline-offset: 3px; border-radius: 6px; }
+
+/* ---------- Hero ---------- */
+.hero { position: relative; aspect-ratio: 7 / 3; display: flex; align-items: flex-start; overflow: hidden; background: #8fd0f5; }
+.hero picture, .hero img.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero img.scene { object-fit: cover; object-position: 100% 100%; animation: inn 1.6s ease-out both; }
+@keyframes inn { from { transform: scale(1.06); filter: saturate(.7) brightness(1.08); } to { transform: none; filter: none; } }
+.hero .innhold { position: relative; z-index: 1; width: min(1200px, 100%); margin: 0 auto; padding: clamp(28px, 6vw, 72px) 28px 0; }
+.merke { display: inline-flex; align-items: center; gap: 12px; font-family: 'Lilita One', sans-serif; font-size: 22px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.18); text-decoration: none; }
+.merke .blokk { width: 34px; height: 34px; background: var(--gress); box-shadow: inset 0 -16px 0 var(--jord), inset -4px -4px 0 rgba(0,0,0,.18); border-radius: 3px; }
+.hero h1 { font-size: clamp(60px, 9vw, 128px); line-height: .9; color: #fff; margin-top: clamp(8px, 3vw, 40px);
+  text-shadow: 0 5px 0 #2f6fa3, 0 10px 0 rgba(20, 60, 100, .25); }
+.hero .ingress { max-width: 30ch; font-size: clamp(19px, 2vw, 23px); line-height: 1.45; margin: 22px 0 28px; color: #0f2c44; font-weight: 700;
+  background: rgba(255,255,255,.82); padding: 14px 18px; border-radius: 4px; box-shadow: 6px 6px 0 rgba(15, 44, 68, .18); }
+.handlinger { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.knapp { font: inherit; font-weight: 700; font-size: 19px; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; cursor: pointer;
+  padding: 14px 22px; border: none; border-radius: 4px; background: var(--sol); color: var(--blekk); box-shadow: 0 5px 0 #c99a12; transition: transform .06s; }
+.knapp:active { transform: translateY(3px); box-shadow: 0 2px 0 #c99a12; }
+.knapp.hvit { background: #fff; box-shadow: 0 5px 0 #b9c7d2; }
+.elevtips { font-size: 16px; color: #0f2c44; background: rgba(255,255,255,.7); padding: 8px 12px; border-radius: 4px; }
+
+/* Gresskant: en rad med blokker i overgangen fra bildet */
+.gresskant { height: 34px; background:
+  linear-gradient(var(--gress) 0 12px, transparent 12px) 0 0 / 34px 34px,
+  repeating-linear-gradient(90deg, var(--jord) 0 33px, var(--jord-mork) 33px 34px); position: relative; z-index: 2; }
+.gresskant::before { content: ''; position: absolute; left: 0; right: 0; top: 12px; height: 4px;
+  background: repeating-linear-gradient(90deg, var(--gress-mork) 0 6px, transparent 6px 12px, var(--gress-mork) 12px 16px, transparent 16px 34px); }
+
+/* ---------- Seksjoner ---------- */
+.seksjon { width: min(1100px, 100%); margin: 0 auto; padding: clamp(56px, 8vw, 96px) 28px; }
+.seksjon > h2 { font-size: clamp(34px, 4.6vw, 52px); color: var(--jord-mork); max-width: 18ch; line-height: 1.05; }
+.seksjon > p.ledetekst { max-width: 58ch; color: var(--dempet); margin: 14px 0 0; }
+
+/* Veien: sju steg langs en grussti */
+.vei { list-style: none; margin: 44px 0 0; padding: 0; position: relative; display: grid; gap: 26px; }
+.vei::before { content: ''; position: absolute; left: 27px; top: 10px; bottom: 10px; width: 14px;
+  background: repeating-linear-gradient(#b5b1aa 0 14px, #a29d95 14px 28px); border-radius: 2px; }
+.vei li { position: relative; display: grid; grid-template-columns: 68px 1fr; gap: 22px; align-items: start; }
+.vei .stein { width: 68px; height: 68px; display: grid; place-items: center; font-family: 'Lilita One', sans-serif; font-size: 30px; color: #fff;
+  border-radius: 4px; box-shadow: inset -7px -7px 0 rgba(0,0,0,.2), inset 5px 5px 0 rgba(255,255,255,.22), 0 4px 0 rgba(0,0,0,.12); text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.vei li:nth-child(1) .stein { background: #c9a86a; } .vei li:nth-child(2) .stein { background: #d98c8c; }
+.vei li:nth-child(3) .stein { background: #8c8f94; } .vei li:nth-child(4) .stein { background: #6b4a2b; }
+.vei li:nth-child(5) .stein { background: #3f86c4; } .vei li:nth-child(6) .stein { background: #2f9a5a; }
+.vei li:nth-child(7) .stein { background: #8a5fb8; }
+.vei h3 { font-size: 25px; color: var(--blekk); margin-top: 6px; }
+.vei p { margin: 4px 0 0; max-width: 56ch; color: var(--dempet); }
+
+/* Ferdigheter */
+.ferdigheter { background: #eaf5df; }
+.ferdigheter .seksjon { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 48px; align-items: start; }
+.ferdigheter dl { margin: 0; display: grid; gap: 0; }
+.ferdigheter dt { font-family: 'Lilita One', sans-serif; font-size: 22px; color: var(--gress-mork); padding-top: 16px; border-top: 3px solid rgba(61,122,31,.18); }
+.ferdigheter dt:first-child { border-top: none; padding-top: 0; }
+.ferdigheter dd { margin: 2px 0 16px; color: var(--blekk); }
+
+/* Lærer */
+.laerer { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+.laerer ul { padding: 0; margin: 20px 0 28px; list-style: none; display: grid; gap: 10px; }
+.laerer li { padding-left: 34px; position: relative; }
+.laerer li::before { content: ''; position: absolute; left: 0; top: 6px; width: 18px; height: 18px; background: var(--gress); box-shadow: inset 0 -8px 0 var(--jord), inset -3px -3px 0 rgba(0,0,0,.18); border-radius: 2px; }
+.kiste { background: #6b4a2b; border-radius: 6px; padding: 18px; box-shadow: inset -10px -10px 0 rgba(0,0,0,.18), 0 8px 0 #4a321c; }
+.kiste .ruter { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; background: #c6c0b2; padding: 10px; border-radius: 3px; }
+.kiste .rute { aspect-ratio: 1; background: #8b8577; border-radius: 2px; display: grid; place-items: center; box-shadow: inset 2px 2px 0 rgba(0,0,0,.25); }
+.kiste .rute svg { width: 80%; height: 80%; image-rendering: pixelated; }
+.kiste figcaption { color: #f4e6cf; font-size: 15px; margin-top: 10px; }
+
+footer { background: var(--jord-mork); color: #f4e6cf; }
+footer .seksjon { padding-top: 34px; padding-bottom: 34px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: space-between; font-size: 15px; }
+footer p { margin: 0; max-width: 62ch; }
+
+@media (max-width: 860px) {
+  .hero { aspect-ratio: auto; display: block; background: #79c4f2; }
+  .hero img.scene { position: static; display: block; width: 100%; height: auto; aspect-ratio: 7 / 3; object-fit: cover; }
+  .hero .innhold { padding-bottom: 28px; }
+  .hero h1 { margin-top: 20px; }
+  .ferdigheter .seksjon, .laerer { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 520px) {
+  .vei li { grid-template-columns: 52px 1fr; gap: 16px; }
+  .vei .stein { width: 52px; height: 52px; font-size: 24px; }
+  .vei::before { left: 20px; }
+}

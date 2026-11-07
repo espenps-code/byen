@@ -21,7 +21,7 @@ const Laerer = {
     const sider = {
       oversikt: 'sideOversikt', soknader: 'sideSoknader', bestillinger: 'sideBestillinger', levering: 'sideLevering',
       bank: 'sideBank', uke: 'sideUke', post: 'sidePost', hendelser: 'sideHendelser', lotto: 'sideLotto',
-      jobber: 'sideJobber', bystyre: 'sideBystyre', kontoer: 'sideKontoer', katalog: 'sideKatalog', innstillinger: 'sideInnstillinger'
+      jobber: 'sideJobber', bystyre: 'sideBystyre', kontoer: 'sideKontoer', katalog: 'sideKatalog', innstillinger: 'sideInnstillinger', laereplan: 'sideLaereplan'
     };
     $('#rot').innerHTML = `<div class="app"><nav class="meny" id="lMeny"></nav><main class="innhold">${this[sider[this.side] || 'sideOversikt']()}</main></div>`;
     this.tegnMeny();
@@ -52,6 +52,7 @@ const Laerer = {
       ${p('jobber', '💼', 'Jobber og bedrifter')}${p('bystyre', '🏛️', 'Bystyret')}
       <div class="skille"></div>
       ${p('kontoer', '🏠', 'Husholdninger')}${p('katalog', '📋', 'Varekatalog')}${p('innstillinger', '⚙️', 'Innstillinger')}
+      ${p('laereplan', '🎯', 'Læreplanmål')}
       <div class="skille"></div>
       <button class="punkt" onclick="location.href='laerer.html'"><span class="ik">🗂️</span>Mine klasser</button>
       <button class="punkt" onclick="Laerer.loggUt()"><span class="ik">🚪</span>Logg ut</button>`;
@@ -60,13 +61,13 @@ const Laerer = {
   /* ---------- Innlogging ---------- */
   tegnInnlogging() {
     const fb = Store.firebaseModus;
-    $('#rot').innerHTML = `<div class="innlogging"><div class="kort"><h2>Bysjefen</h2>
+    $('#rot').innerHTML = `<div class="velkomst"><div class="innlogging"><div class="kort"><h2>Logg inn som lærer</h2>
       ${fb ? `<label class="felt" for="lEpost">E-post</label><input id="lEpost" type="email" autocomplete="username">
               <label class="felt" for="lPass">Passord</label><input id="lPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')Laerer.loggInn()">
               <p class="dempet liten" style="margin-top:8px">Bruk lærerkontoen du opprettet i Firebase (Authentication → Users).</p>`
         : `<p class="dempet">${esc(B.innst().byNavn || '')}</p><label class="felt" for="lPin">Lærer-PIN</label><input id="lPin" class="pin" type="password" onkeydown="if(event.key==='Enter')Laerer.loggInn()">
            <p class="dempet liten" style="margin-top:8px">Første gang er PIN-koden <b>1234</b>. Bytt den under Innstillinger.</p>`}
-      <div id="lFeil"></div><p style="margin-top:14px"><button onclick="Laerer.loggInn()">Logg inn</button></p></div></div>`;
+      <div id="lFeil"></div><p style="margin-top:14px"><button onclick="Laerer.loggInn()">Logg inn</button></p></div></div></div>`;
   },
   async loggInn() {
     try {
@@ -91,12 +92,12 @@ const Laerer = {
   /* ---------- Mine klasser ---------- */
   eierNokkel() { return 'laerere/' + (Store.firebaseModus ? Store.uid : 'lokal') + '/byer'; },
   async tegnKlasser() {
-    $('#rot').innerHTML = `<div class="innlogging" style="max-width:720px"><div class="kort"><h1 style="color:var(--jord-mork)">Mine klasser</h1>
+    $('#rot').innerHTML = `<div class="velkomst"><div class="innlogging" style="max-width:720px"><div class="kort"><h1 style="color:var(--jord-mork)">Mine klasser</h1>
       <div id="klasseliste" class="dempet">Henter …</div></div>
       <div class="kort"><h2>Ny klasse</h2><p class="dempet">Gi byen et navn – for eksempel «Galtvang 7A». Hver klasse får sin egen elevlenke.</p>
         <div class="rad"><input id="nyKlasse" placeholder="Navn på byen" style="flex:1" onkeydown="if(event.key==='Enter')Laerer.nyKlasse()"><button onclick="Laerer.nyKlasse()">Opprett klasse</button></div>
         <div id="klasseFeil"></div></div>
-      ${Store.firebaseModus ? '<p style="text-align:center"><button class="sek" onclick="Laerer.loggUt()">Logg ut</button></p>' : ''}</div>`;
+      ${Store.firebaseModus ? '<p style="text-align:center"><button class="sek" onclick="Laerer.loggUt()">Logg ut</button></p>' : ''}</div></div>`;
     const klasser = Object.entries(await Store.hentGlobal(this.eierNokkel()) || {}).sort((a, b) => (b[1].tid || 0) - (a[1].tid || 0));
     $('#klasseliste').innerHTML = klasser.length ? klasser.map(([id, k]) => `<div class="brev" style="box-shadow:none;border:1px solid var(--kant);border-left-width:6px;cursor:pointer" onclick="Laerer.aapneKlasse('${id}')">
         <div class="rad mellom"><div><div class="emne">${esc(k.navn)}</div><div class="dempet">Opprettet ${dato(k.tid)}</div></div><button class="sma">Åpne</button></div></div>`).join('')
@@ -380,14 +381,16 @@ const Laerer = {
     const lonn = [];
     hh.forEach(k => B.medlemmer(k).forEach((navn, i) => { const j = B.jobbFor(k.id, i); if (j && j.type === 'offentlig') lonn.push({ kontoId: k.id, navn, jobb: j.navn, sum: I.offentligLonn }); }));
     const totalLonn = lonn.reduce((s, l) => s + l.sum, 0);
+    const prosent = I.skatteModell === 'prosent';
     const skatt = hh.length ? Math.ceil(totalLonn / hh.length) : 0;
     return {
-      skatt, totalLonn, lonn,
+      skatt, totalLonn, lonn, prosent,
       rader: hh.map(k => {
         const a = k.avtale || {};
         const f = a.forsikring ? I.forsikringPerUke : 0, l = a.lotto ? I.lottoPerUke : 0;
         const inn = lonn.filter(x => x.kontoId === k.id).reduce((s, x) => s + x.sum, 0);
-        return { k, forsikring: f, lotto: l, lonn: inn, skatt, netto: inn - f - l - skatt };
+        const sk = prosent ? Math.round(inn * I.skattProsent / 100) : skatt;
+        return { k, forsikring: f, lotto: l, lonn: inn, skatt: sk, netto: inn - f - l - sk };
       })
     };
   },
@@ -396,7 +399,8 @@ const Laerer = {
     return `<div class="sidetittel"><h1>Ukeoppgjør</h1><p class="dempet">Kjøres én gang i uka: lønn fra byen, skatt, forsikring og lotto.</p></div>
       ${sist ? `<div class="melding info">Forrige ukeoppgjør: ${datoTid(sist.tid)}</div>` : ''}
       <div class="kort">
-        <p>Offentlige lønninger denne uka: <b>${kr(u.totalLonn)}</b> fordelt på ${u.lonn.length} ansatte. Det deles på alle husholdningene som skatt: <b>${kr(u.skatt)}</b> hver.</p>
+        <p>Offentlige lønninger denne uka: <b>${kr(u.totalLonn)}</b> fordelt på ${u.lonn.length} ansatte.
+          ${u.prosent ? `Skatten er <b>${B.innst().skattProsent} %</b> av lønnen (lønn fra bedrifter skattlegges når du fordeler overskudd).` : `Det deles på alle husholdningene som skatt: <b>${kr(u.skatt)}</b> hver.`}</p>
         <div class="tabellboks"><table><tr><th>Husholdning</th><th class="tall">Lønn</th><th class="tall">Skatt</th><th class="tall">Forsikring</th><th class="tall">Lotto</th><th class="tall">Netto</th></tr>
           ${u.rader.map(r => `<tr><td>${esc(B.kontoNavn(r.k.id))}</td><td class="tall pluss">${r.lonn ? kr(r.lonn) : ''}</td><td class="tall minus">${r.skatt ? kr(-r.skatt) : ''}</td><td class="tall minus">${r.forsikring ? kr(-r.forsikring) : ''}</td><td class="tall minus">${r.lotto ? kr(-r.lotto) : ''}</td><td class="tall"><b>${kr(r.netto)}</b></td></tr>`).join('')}
         </table></div>
@@ -414,7 +418,7 @@ const Laerer = {
       await B.post_ny(l.kontoId, { type: 'lonnsslipp', tittel: 'Lønnsslipp – ' + l.navn, navn: l.navn, jobb: l.jobb, sum: l.sum });
     }
     for (const r of u.rader) {
-      if (r.skatt) await B.trans_ny(r.k.id, -r.skatt, 'Skatt', 'skatt');
+      if (r.skatt) await B.trans_ny(r.k.id, -r.skatt, u.prosent ? `Skatt (${B.innst().skattProsent} % av ${kr(r.lonn)})` : 'Skatt', 'skatt');
       if (r.forsikring) await B.trans_ny(r.k.id, -r.forsikring, 'Forsikring', 'forsikring');
       if (r.lotto) await B.trans_ny(r.k.id, -r.lotto, 'Lotto', 'lotto');
       const deler = [r.skatt && `Skatt: ${kr(r.skatt)}`, r.forsikring && `Forsikring: ${kr(r.forsikring)}`, r.lotto && `Lotto: ${kr(r.lotto)}`].filter(Boolean);
@@ -446,7 +450,9 @@ const Laerer = {
           <div class="chips">${TILBUDSMALER.map((t, i) => `<button onclick="Laerer.brukMal(${i})">${esc(t.tittel)}</button>`).join('')}</div>
           <label class="felt" for="tbTittel">Tilbud</label><input id="tbTittel" style="width:100%">
           <label class="felt" for="tbTekst">Beskrivelse</label><textarea id="tbTekst"></textarea>
-          <label class="felt" for="tbPris">Pris</label><input type="number" id="tbPris" min="0">
+          <div class="rad"><div><label class="felt" for="tbPris">Ordinær pris</label><input type="number" id="tbPris" min="0"></div>
+            <div><label class="felt" for="tbAvslag">Avslag i %</label><input type="number" id="tbAvslag" min="0" max="90" placeholder="0"></div></div>
+          <p class="dempet liten">Med avslag må elevene selv regne ut den nye prisen før de kan kjøpe.</p>
           <p style="margin-top:10px"><button onclick="Laerer.sendTilbud()">Send til alle husholdninger</button></p>
         </div>
       </div>
@@ -461,9 +467,11 @@ const Laerer = {
     UI.toast(`Sendt til ${mottakere.length}`); $('#pTittel').value = ''; $('#pTekst').value = '';
   },
   async sendTilbud() {
-    const tittel = $('#tbTittel').value.trim(), tekst = $('#tbTekst').value.trim(), pris = parseInt($('#tbPris').value);
-    if (!tittel || !pris) { UI.toast('Skriv tilbud og pris.', 'feil'); return; }
-    for (const k of B.kontoer('hh')) await B.post_ny(k.id, { type: 'tilbud', tittel, tekst, pris });
+    const tittel = $('#tbTittel').value.trim(), tekst = $('#tbTekst').value.trim(), ord = parseInt($('#tbPris').value);
+    const avslag = Math.max(0, Math.min(90, parseInt($('#tbAvslag').value) || 0));
+    if (!tittel || !ord) { UI.toast('Skriv tilbud og pris.', 'feil'); return; }
+    const pris = Math.round(ord * (100 - avslag) / 100);
+    for (const k of B.kontoer('hh')) await B.post_ny(k.id, { type: 'tilbud', tittel, tekst, pris, ordinaerPris: ord, avslag });
     UI.toast('Tilbudet er sendt');
   },
 
@@ -616,9 +624,11 @@ const Laerer = {
     if (sum > B.saldo(bedriftId)) { UI.toast('Bedriften har ikke så mye penger.', 'feil'); return; }
     const hver = Math.floor(sum / a.length);
     await B.trans_ny(bedriftId, -hver * a.length, `Lønn til ${a.length} ansatte`, 'lonn');
+    const I = B.innst(), skatt = I.skatteModell === 'prosent' ? Math.round(hver * I.skattProsent / 100) : 0;
     for (const x of a) {
       await B.trans_ny(x.kontoId, hver, `Lønn ${x.navn} (${j.navn})`, 'lonn');
-      await B.post_ny(x.kontoId, { type: 'lonnsslipp', tittel: 'Lønnsslipp – ' + x.navn, navn: x.navn, jobb: j.navn, sum: hver });
+      if (skatt) await B.trans_ny(x.kontoId, -skatt, `Skatt (${I.skattProsent} % av ${kr(hver)})`, 'skatt');
+      await B.post_ny(x.kontoId, { type: 'lonnsslipp', tittel: 'Lønnsslipp – ' + x.navn, navn: x.navn, jobb: j.navn, sum: hver, skatt });
     }
     UI.toast(`${kr(hver)} til hver av de ansatte`);
   },
@@ -741,6 +751,22 @@ const Laerer = {
   },
 
   /* =========================================================
+     LÆREPLANMÅL
+     ========================================================= */
+  sideLaereplan() {
+    const grupper = [['kjerne', 'Kjernemål', 'Trenes direkte gjennom Klassebyen og egner seg for vurdering.'],
+      ['støtte', 'Støttemål', 'Berøres naturlig i opplegget, men er ikke hovedfokus.'],
+      ['utvidelse', 'Mulige utvidelser', 'Kan dekkes med et lite ekstra opplegg knyttet til byen.']];
+    return `<div class="sidetittel"><div class="rad mellom"><h1>Læreplanmål</h1><button class="sek ikke-skriv" onclick="window.print()">Skriv ut</button></div>
+      <p class="dempet">Kompetansemål etter 7. trinn i LK20, fra læreplanene som gjelder fra 1. august 2026. Areal og omkrets er hentet fra 6. trinn som repetisjon.</p></div>
+      ${grupper.map(([r, tittel, tekst]) => `<div class="kort"><h2>${tittel}</h2><p class="dempet">${tekst}</p><div class="tabellboks"><table>
+        <tr><th style="width:150px">Fag</th><th>Kompetansemål</th><th>I Klassebyen</th></tr>
+        ${LAEREPLAN.filter(m => m.rolle === r).map(m => { const f = LAEREPLAN_FAG[m.fag]; return `<tr><td><b>${esc(f.navn)}</b><br><a class="dempet liten" href="${f.url}" target="_blank" rel="noopener">${f.kode}</a></td><td>${esc(m.mal)}</td><td class="dempet">${esc(m.hvor)}</td></tr>`; }).join('')}
+      </table></div></div>`).join('')}
+      <div class="kort flat"><p class="dempet liten" style="margin:0">Vurdert, men ikke tatt med: «bygge og eksperimentere med stabile konstruksjoner» (kunst og håndverk) krever fysiske materialer, og flere samfunnsfagsmål (historie, geografi, mangfold, menneskerettigheter, identitet) passer ikke naturlig inn i byspillet.</p></div>`;
+  },
+
+  /* =========================================================
      VAREKATALOG
      ========================================================= */
   sideKatalog() {
@@ -765,6 +791,9 @@ const Laerer = {
         <tr><td><label for="i_byNavn">Navn på byen</label></td><td><input id="i_byNavn" value="${esc(I.byNavn)}" onchange="Laerer.settInnst('byNavn',this.value.trim())"></td></tr>
         ${tall('startbonus', 'Startbonus husholdning (kr)')}${tall('bedriftBonus', 'Oppstartsbonus bedrift (kr)')}
         ${tall('offentligLonn', 'Ukelønn offentlige jobber (kr)', 'Politi, brannvesen, sykehus. Betales med skatt.')}
+        <tr><td><label for="i_skm">Skatt</label><div class="dempet liten">Prosent gir øving i prosentregning (matematikk 7. trinn)</div></td>
+          <td><select id="i_skm" onchange="Laerer.settInnst('skatteModell',this.value)"><option value="fordelt" ${I.skatteModell !== 'prosent' ? 'selected' : ''}>Offentlige lønninger deles likt på alle</option><option value="prosent" ${I.skatteModell === 'prosent' ? 'selected' : ''}>Prosent av lønn</option></select></td></tr>
+        ${I.skatteModell === 'prosent' ? tall('skattProsent', 'Skatteprosent (%)') : ''}
         ${tall('forsikringPerUke', 'Forsikring per uke (kr)')}${tall('lottoPerUke', 'Lotto per uke (kr)')}
         ${tall('lottoPremie3', 'Lottopremie, tre rette (kr)')}${tall('lottoPremie2', 'Lottopremie, to rette (kr)', '0 = ingen premie')}
         ${tall('smaragdVerdi', 'Verdi av én smaragd (kr)')}

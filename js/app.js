@@ -18,7 +18,7 @@ const App = {
 document.addEventListener('focusout', () => { if (App.venter) { App.venter = false; setTimeout(() => App.endret(), 50); } });
 
 (async () => {
-  $('#logoIkon').innerHTML = Ikon.mc('birch_planks');
+  $('#logoIkon').innerHTML = '<span class="blokk"></span>';
   $('#modus').textContent = Store.firebaseModus ? 'Online' : 'Lokal testmodus';
   try {
     await Store.start({ anonym: window.SIDE === 'elev' });

@@ -74,8 +74,8 @@ const Elev = {
       return;
     }
     const hh = B.kontoer('hh');
-    $('#rot').innerHTML = `<div class="innlogging"><div class="kort">
-      <h2>Logg inn</h2>
+    $('#rot').innerHTML = `<div class="velkomst"><div class="innlogging"><div class="kort">
+      <h2>Velkommen til ${esc(B.innst().byNavn || 'byen')}!</h2><p class="dempet">Velg husholdningen din og skriv PIN-koden.</p>
       ${hh.length ? `
         <label class="felt" for="velgHh">Husholdning</label>
         <select id="velgHh">${hh.map(h => `<option value="${h.id}">Tomt ${esc(h.tomt)} – ${esc(h.navn)}</option>`).join('')}</select>
@@ -84,7 +84,7 @@ const Elev = {
         <div id="innFeil"></div>
         <p style="margin-top:16px"><button onclick="Elev.loggInn()">Logg inn</button></p>`
       : UI.tom('Bysjefen har ikke lagt inn noen husholdninger ennå.')}
-    </div></div>`;
+    </div></div></div>`;
   },
   loggInn() {
     const id = $('#velgHh').value, k = B.konto(id), pin = $('#elevPin').value;
@@ -688,7 +688,9 @@ const Elev = {
         ${(p.linjer || []).map(l => { const v = B.vare(l.vareId) || l; return `<tr><td class="miniikon">${v.mc ? Ikon.vare(v) : ''}</td><td>${esc(l.navn)}</td><td class="tall">${l.antall} ${l.enhet === 'stack' ? 'stack' : 'stk'}</td><td class="tall">${kr(l.pris)}</td><td class="tall">${kr(l.antall * l.pris)}</td></tr>`; }).join('')}
         <tr class="sum"><td></td><td colspan="3">Å betale (trukket fra kontoen)</td><td class="tall">${kr(p.sum)}</td></tr></table></div>`;
     } else if (p.type === 'tilbud') {
-      kropp = `<p>${esc(p.tekst)}</p><p><b>Pris: ${kr(p.pris)}</b></p>` + (p.svar
+      kropp = `<p>${esc(p.tekst)}</p>` + (p.avslag && !p.svar
+        ? `<p><b>Ordinær pris: ${kr(p.ordinaerPris)} – nå ${p.avslag} % avslag!</b></p><label class="felt" for="tp_${p.id}">Hva blir prisen? Regn ut før dere svarer.</label><input type="number" id="tp_${p.id}" placeholder="kr">`
+        : `<p><b>Pris: ${kr(p.pris)}</b>${p.avslag ? ` <span class="dempet">(${p.avslag} % avslag på ${kr(p.ordinaerPris)})</span>` : ''}</p>`) + (p.svar
         ? `<div class="melding ${p.svar === 'ja' ? 'ok' : 'info'}">Dere svarte ${p.svar === 'ja' ? 'JA – beløpet er trukket fra kontoen.' : 'nei takk.'}</div>`
         : `<div class="rad"><button onclick="Elev.svarTilbud('${p.id}', true)">Ja, vi kjøper</button><button class="sek" onclick="Elev.svarTilbud('${p.id}', false)">Nei takk</button></div>`);
     } else if (p.type === 'hendelse') {
@@ -698,7 +700,7 @@ const Elev = {
       if (p.skriv) kropp += p.svar ? `<h3>Det dere skrev</h3><p style="white-space:pre-wrap">${esc(p.svar)}</p>`
         : `<label class="felt" for="svar_${p.id}">Skriv her:</label><textarea id="svar_${p.id}"></textarea><p style="margin-top:8px"><button onclick="Elev.svarSkriv('${p.id}')">Send</button></p>`;
     } else if (p.type === 'lonnsslipp') {
-      kropp = `<table><tr><td>${esc(p.navn || '')}, ${esc(p.jobb || '')}</td><td class="tall"><b>${kr(p.sum)}</b></td></tr></table><p class="dempet">Lønnen er satt inn på husholdningens konto.</p>`;
+      kropp = `<table><tr><td>${esc(p.navn || '')}, ${esc(p.jobb || '')}</td><td class="tall"><b>${kr(p.sum)}</b></td></tr>${p.skatt ? `<tr><td>Skattetrekk</td><td class="tall minus">${kr(-p.skatt)}</td></tr><tr class="sum"><td>Utbetalt</td><td class="tall">${kr(p.sum - p.skatt)}</td></tr>` : ''}</table><p class="dempet">Lønnen er satt inn på husholdningens konto.</p>`;
     } else {
       kropp = `<p style="white-space:pre-wrap">${esc(p.tekst || '')}</p>`;
     }
@@ -714,6 +716,11 @@ const Elev = {
   async svarTilbud(id, ja) {
     const p = Store.hent(`post/${this.kontoId}/${id}`); if (!p || p.svar) return;
     if (ja) {
+      if (p.avslag) {
+        const svar = parseInt(($('#tp_' + id) || {}).value);
+        if (isNaN(svar)) { UI.toast('Regn ut prisen med avslag først.', 'feil'); return; }
+        if (Math.abs(svar - p.pris) > 1) { UI.toast('Prisen stemmer ikke. Hvor mye er ' + p.avslag + ' % av ' + kr(p.ordinaerPris) + '?', 'feil'); return; }
+      }
       if (p.pris > B.disponibelt(this.kontoId)) { UI.toast('Dere har ikke råd til dette tilbudet.', 'feil'); return; }
       if (!confirm(`Kjøpe «${p.tittel}» for ${kr(p.pris)}?`)) return;
       await B.trans_ny(this.kontoId, -p.pris, p.tittel, 'tilbud');
