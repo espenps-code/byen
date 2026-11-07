@@ -101,22 +101,22 @@ const Elev = {
     const tall = [...Array(10).keys()];
     $('#rot').innerHTML = `<div class="innlogging" style="max-width:640px"><div class="kort">
       <h1 style="color:var(--jord-mork)">Avtale</h1>
-      <p>Velkommen til ${esc(I.byNavn || 'byen')}, ${esc(B.medlemmer(k).join(' og ') || k.navn)}! Før dere kan flytte inn, må dere fylle ut avtalen.</p>
-      <div class="melding info">Dere får en startbonus på <b>${kr(I.startbonus)}</b> til å bygge og innrede huset.</div>
+      <p>Velkommen til ${esc(I.byNavn || 'byen')}, ${esc(B.medlemmer(k).join(' og ') || k.navn)}! Før ${this.du('dere', 'du')} kan flytte inn, må ${this.du('dere', 'du')} fylle ut avtalen.</p>
+      <div class="melding info">${this.du('Dere', 'Du')} får en startbonus på <b>${kr(I.startbonus)}</b> til å bygge og innrede huset.</div>
       <h3>Forsikring – ${kr(I.forsikringPerUke)} per uke</h3>
       <p class="dempet">Med forsikring blir det mye billigere hvis noe går galt i huset (vannlekkasje, skadedyr …).</p>
-      <div class="rad"><label><input type="radio" name="fors" value="ja"> Ja, vi vil ha forsikring</label>
+      <div class="rad"><label><input type="radio" name="fors" value="ja"> Ja, ${this.du('vi', 'jeg')} vil ha forsikring</label>
         <label><input type="radio" name="fors" value="nei"> Nei takk</label></div>
       <h3>Lotto – ${kr(I.lottoPerUke)} per uke</h3>
       <p class="dempet">Hver uke trekkes tre tall. Tre rette gir ${kr(I.lottoPremie3)}${I.lottoPremie2 ? `, to rette gir ${kr(I.lottoPremie2)}` : ''}.</p>
-      <div class="rad"><label><input type="radio" name="lotto" value="ja" onchange="$('#lottoTall').classList.remove('skjult')"> Ja, vi tipper</label>
+      <div class="rad"><label><input type="radio" name="lotto" value="ja" onchange="$('#lottoTall').classList.remove('skjult')"> Ja, ${this.du('vi', 'jeg')} tipper</label>
         <label><input type="radio" name="lotto" value="nei" onchange="$('#lottoTall').classList.add('skjult')"> Nei takk</label></div>
       <div id="lottoTall" class="skjult" style="margin-top:10px"><p class="dempet">Velg tre forskjellige tall:</p>
         <div class="rad">${tall.map(t => `<label style="background:var(--flate);padding:6px 10px;border-radius:10px"><input type="checkbox" class="lt" value="${t}" onchange="Elev.begrensLotto(this)"> ${t}</label>`).join('')}</div></div>
       <h3>Regler</h3>
-      <label class="sjekk"><input type="checkbox" id="regler"> Vi skal følge alle reglene i byen.</label>
-      <label class="sjekk"><input type="checkbox" id="respekt"> Vi skal respektere de andre i byen.</label>
-      <label class="felt" for="signatur">Signatur (skriv navnene deres)</label>
+      <label class="sjekk"><input type="checkbox" id="regler"> ${this.du('Vi', 'Jeg')} skal følge alle reglene i byen.</label>
+      <label class="sjekk"><input type="checkbox" id="respekt"> ${this.du('Vi', 'Jeg')} skal respektere de andre i byen.</label>
+      <label class="felt" for="signatur">Signatur (${this.du('skriv navnene deres', 'skriv navnet ditt')})</label>
       <input id="signatur" style="width:100%" placeholder="${esc(B.medlemmer(k).join(' og '))}">
       <div id="avtaleFeil"></div>
       <div class="rad" style="margin-top:16px"><button onclick="Elev.signerAvtale()">Signer avtalen</button>
@@ -134,8 +134,8 @@ const Elev = {
     if (!fors) feil.push('Velg om dere vil ha forsikring.');
     if (!lotto) feil.push('Velg om dere vil tippe lotto.');
     if (lotto && lotto.value === 'ja' && tall.length !== 3) feil.push('Velg nøyaktig tre lottotall.');
-    if (!$('#regler').checked || !$('#respekt').checked) feil.push('Dere må godta reglene.');
-    if ($('#signatur').value.trim().length < 2) feil.push('Skriv navnene deres som signatur.');
+    if (!$('#regler').checked || !$('#respekt').checked) feil.push('Reglene må godtas.');
+    if ($('#signatur').value.trim().length < 2) feil.push('Skriv under med navn.');
     if (feil.length) { $('#avtaleFeil').innerHTML = `<div class="melding feil">${feil.join('<br>')}</div>`; return; }
     await Store.sett('kontoer/' + this.kontoId + '/avtale', {
       forsikring: fors.value === 'ja', lotto: lotto.value === 'ja', tall: lotto.value === 'ja' ? tall : [],
@@ -145,13 +145,44 @@ const Elev = {
   },
 
   /* ---------- Hjem ---------- */
+  // «du» eller «dere» ut fra hvor mange som bor i husholdningen
+  du(dere, du) { return B.medlemmer(this.konto).length > 1 ? dere : du; },
+
   sideHjem() {
     const k = this.konto, I = B.innst();
     const s = Store.hent('soknader/' + k.id);
     const best = liste(Store.hent('bestillinger')).filter(b => b.kontoId === k.id);
     const jobber = B.medlemmer(k).map((n, i) => B.jobbFor(k.id, i));
-    const sjekk = (status, tekst, side) => `<div class="sjekk ${status}" ${side ? `style="cursor:pointer" onclick="Elev.gaaTil('${side}')"` : ''}><span class="pr">${status === 'ja' ? '✓' : status === 'nei' ? '!' : '·'}</span><span>${tekst}</span></div>`;
-    const sStatus = !s ? ['venter', 'Tegn huset og send byggesøknad'] : s.status === 'godkjent' ? ['ja', 'Byggesøknaden er godkjent'] : s.status === 'sendt' ? ['venter', 'Byggesøknaden venter på svar fra Bysjefen'] : s.status === 'avvist' ? ['nei', 'Byggesøknaden ble ikke godkjent – se meldingen og prøv igjen'] : ['venter', 'Byggesøknaden er ikke sendt ennå'];
+    const sokt = B.medlemmer(k).map((n, i) => Store.hent('jobbsoknader/' + k.id + '~' + i));
+    const regnskap = liste(Store.hent('regnskap/' + k.id)).length;
+    const forslag = liste(Store.hent('forslag'));
+    const iBystyret = forslag.some(f => f.kontoId === k.id || (f.stotte && f.stotte[k.id]));
+    const est = s && s.elevEstimat && s.elevEstimat.stacks != null;
+    const D = (dere, du) => this.du(dere, du);
+    // status: 'ferdig' | 'venter' | 'feil' | 'aktiv' | 'laast'
+    const steg = [
+      { tittel: 'Signer avtalen', side: null, status: 'ferdig', tekst: `Avtalen er signert. Forsikring: ${k.avtale.forsikring ? 'ja' : 'nei'}. Lotto: ${k.avtale.lotto ? 'ja, tallene ' + (k.avtale.tall || []).join(', ') : 'nei'}.` },
+      { tittel: 'Tegn huset', side: 'bygg', ...(!s || s.status === 'utkast' ? { status: 'aktiv', tekst: `Tegn plantegningen rute for rute, se huset fra alle sider og i 3D, og send byggesøknad.` }
+        : s.status === 'sendt' ? { status: 'venter', tekst: 'Byggesøknaden er sendt. Bysjefen ser på den.' }
+        : s.status === 'avvist' ? { status: 'feil', tekst: 'Byggesøknaden ble ikke godkjent. Les meldingen, rett opp og send på nytt.' }
+        : { status: 'ferdig', tekst: 'Byggesøknaden er godkjent!' }) },
+      { tittel: 'Regn ut hva ' + D('dere', 'du') + ' trenger', side: 'bygg', ...(s && s.status === 'godkjent' && est ? { status: 'ferdig', tekst: 'Estimatet er levert. Se hvor nær ' + D('dere', 'du') + ' var under Byggesøknad.' }
+        : est ? { status: 'venter', tekst: 'Estimatet er sendt sammen med byggesøknaden.' }
+        : { status: s && s.status !== 'utkast' ? 'aktiv' : 'laast', tekst: 'Hvor mange blokker blir veggene? Hvor mange glassruter? Regn selv før byggesøknaden sendes.' }) },
+      { tittel: 'Bestill og bygg', side: 'butikk', ...(best.some(b => b.status === 'levert') ? { status: 'ferdig', tekst: 'Varene er levert i kisten på tomta. Bygg huset slik det er tegnet!' }
+        : best.some(b => b.status === 'sendt' || b.status === 'godkjent') ? { status: 'venter', tekst: 'Bestillingen venter på levering.' }
+        : { status: s && s.status === 'godkjent' ? 'aktiv' : 'laast', tekst: 'Handle i byggevarehandelen og regn ut totalen. Varene kommer i kisten på tomta.' }) },
+      { tittel: 'Søk jobb', side: 'jobb', ...(!B.jobber().length ? { status: 'laast', tekst: 'Bysjefen åpner jobbene senere.' }
+        : jobber.every(Boolean) ? { status: 'ferdig', tekst: B.medlemmer(k).map((n, i) => `${n}: ${jobber[i].navn}`).join(' · ') }
+        : sokt.every(Boolean) ? { status: 'venter', tekst: 'Søknaden er sendt. Bysjefen fordeler jobbene.' }
+        : { status: 'aktiv', tekst: 'Politi, sykehus, matbutikk eller restaurant? Skriv tre gode grunner til at du passer.' }) },
+      { tittel: 'Hold styr på pengene', side: 'regnskap', status: regnskap ? 'ferdig' : 'aktiv',
+        tekst: regnskap ? `${regnskap} poster i regnskapet. Husk å føre alt fra postkassen, og sjekk mot banken.` : 'Før regnskap over inntekter og utgifter, og lag et budsjett. Start med startbonusen!' },
+      { tittel: 'Bestem i bystyret', side: 'bystyre', status: iBystyret ? 'ferdig' : 'aktiv',
+        tekst: iBystyret ? 'Du er med i bystyret. Følg med på avstemmingene!' : 'Vil du endre en lov? Skriv lovforslag, samle støtte og stem over dem i klassen.' }
+    ];
+    const merke = { ferdig: '✓', venter: '…', feil: '!', aktiv: '', laast: '' };
+    const neste = steg.find(x => x.status === 'aktiv' || x.status === 'feil');
     const post = B.post(k.id).slice(0, 3);
     return `
       <div class="sidetittel"><h1>Hei, ${esc(B.medlemmer(k).join(' og ') || k.navn)}!</h1><p class="dempet">Tomt ${esc(k.tomt)} i ${esc(I.byNavn || 'byen')}</p></div>
@@ -160,20 +191,17 @@ const Elev = {
         <div class="stat"><div class="tall">${kr(B.disponibelt(k.id))}</div><div class="etikett">Disponibelt (etter bestillinger som venter)</div></div>
         <div class="stat klikk" onclick="Elev.gaaTil('post')"><div class="tall">${B.ulest(k.id)}</div><div class="etikett">Uleste brev</div></div>
       </div>
-      <div class="rutenett to">
-        <div class="kort"><h2>Dette må dere gjøre</h2>
-          ${sjekk('ja', 'Avtalen er signert')}
-          ${sjekk(sStatus[0], sStatus[1], 'bygg')}
-          ${sjekk(best.length ? 'ja' : 'venter', best.length ? `${best.length} bestilling${best.length === 1 ? '' : 'er'} sendt` : 'Bestill materialer i butikken', 'butikk')}
-          ${sjekk(liste(Store.hent('regnskap/' + k.id)).length ? 'ja' : 'venter', 'Før regnskap over inntekter og utgifter', 'regnskap')}
-          ${B.jobber().length ? sjekk(jobber.every(Boolean) ? 'ja' : 'venter', jobber.every(Boolean) ? 'Alle har jobb' : 'Søk jobb i byen', 'jobb') : ''}
+      <div class="hjem-grid">
+        <div class="kort"><h2>Slik blir ${D('dere', 'du')} innbygger${D('e', '')} i byen</h2>
+          ${neste ? `<p class="dempet">Neste steg: <b>${esc(neste.tittel)}</b></p>` : '<p class="dempet">Alle stegene er i gang. Godt jobbet!</p>'}
+          <ol class="elevvei">
+            ${steg.map((x, i) => `<li class="s-${x.status} ${x === neste ? 'neste' : ''}" ${x.side && x.status !== 'laast' ? `onclick="Elev.gaaTil('${x.side}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')Elev.gaaTil('${x.side}')"` : ''}>
+              <span class="stein">${merke[x.status] || i + 1}</span><div><h3>${esc(x.tittel)}</h3><p>${esc(x.tekst)}</p></div></li>`).join('')}
+          </ol>
         </div>
         <div class="kort"><h2>Siste post</h2>
           ${post.length ? post.map(p => `<div class="sjekk ${p.lest ? 'venter' : 'nei'}" style="cursor:pointer" onclick="Elev.gaaTil('post')"><span class="pr">✉</span><span><b>${esc(p.tittel)}</b><br><span class="dempet">${dato(p.tid)}</span></span></div>`).join('') : UI.tom('Postkassen er tom.')}
         </div>
-      </div>
-      <div class="kort"><h2>Avtalen deres</h2>
-        <p>Forsikring: <b>${k.avtale.forsikring ? 'Ja' : 'Nei'}</b> · Lotto: <b>${k.avtale.lotto ? 'Ja, tallene ' + (k.avtale.tall || []).join(', ') : 'Nei'}</b></p>
       </div>`;
   },
 

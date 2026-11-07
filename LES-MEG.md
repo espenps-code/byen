@@ -1,4 +1,4 @@
-# Byen vår – portal for Minecraft Education
+# Klassebyen – portal for Minecraft Education
 
 ## Sidene
 

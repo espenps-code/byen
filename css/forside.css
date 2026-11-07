@@ -58,6 +58,28 @@ a { color: inherit; }
 .vei h3 { font-size: 25px; color: var(--blekk); margin-top: 6px; }
 .vei p { margin: 4px 0 0; max-width: 56ch; color: var(--dempet); }
 
+/* Prosess: sju steg i en kompakt rad */
+.prosess { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; position: relative; }
+.prosess::before { content: ''; position: absolute; left: 4%; right: 4%; top: 27px; height: 12px; background: repeating-linear-gradient(90deg, #b5b1aa 0 14px, #a29d95 14px 28px); border-radius: 2px; }
+.prosess li { position: relative; text-align: center; }
+.prosess .stein { width: 64px; height: 64px; margin: 0 auto 12px; display: grid; place-items: center; font-family: 'Lilita One', sans-serif; font-size: 28px; color: #fff; border-radius: 4px;
+  box-shadow: inset -7px -7px 0 rgba(0,0,0,.2), inset 5px 5px 0 rgba(255,255,255,.22), 0 4px 0 rgba(0,0,0,.12); text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+.prosess li:nth-child(1) .stein { background: #c9a86a; } .prosess li:nth-child(2) .stein { background: #d98c8c; }
+.prosess li:nth-child(3) .stein { background: #8c8f94; } .prosess li:nth-child(4) .stein { background: #6b4a2b; }
+.prosess li:nth-child(5) .stein { background: #3f86c4; } .prosess li:nth-child(6) .stein { background: #2f9a5a; }
+.prosess li:nth-child(7) .stein { background: #8a5fb8; }
+.prosess h3 { font-size: 20px; line-height: 1.1; }
+.prosess p { margin: 6px 0 0; font-size: 15px; color: var(--dempet); line-height: 1.35; }
+.skjult { display: none !important; }
+.liten-tekst { font-size: 15px; color: var(--dempet); margin-top: 12px; }
+@media (max-width: 860px) {
+  .prosess { grid-template-columns: 1fr; gap: 12px; }
+  .prosess::before { left: 26px; right: auto; top: 10px; bottom: 10px; width: 12px; height: auto; background: repeating-linear-gradient(#b5b1aa 0 14px, #a29d95 14px 28px); }
+  .prosess li { display: grid; grid-template-columns: 64px 1fr; column-gap: 16px; text-align: left; align-items: center; }
+  .prosess .stein { margin: 0; grid-row: span 2; }
+  .prosess p { margin: 0; }
+}
+
 /* Ferdigheter */
 .ferdigheter { background: #eaf5df; }
 .ferdigheter .seksjon { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 48px; align-items: start; }

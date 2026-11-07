@@ -682,7 +682,7 @@ const Laerer = {
         <div class="rad" style="margin-top:8px"><span class="dempet">Kiste:</span><input id="nyX" placeholder="x" style="width:80px"><input id="nyY" placeholder="y" style="width:80px"><input id="nyZ" placeholder="z" style="width:80px">
           <span class="dempet">Tomt:</span><input id="nyB" type="number" value="${I.tomtBredde}" style="width:70px">×<input id="nyD" type="number" value="${I.tomtDybde}" style="width:70px">
           <button onclick="Laerer.nyKonto()">Legg til</button></div>
-        <p class="dempet liten" style="margin-top:8px">Startbonusen på ${kr(I.startbonus)} settes inn automatisk, og det lages en PIN-kode.</p>
+        <p class="dempet liten" style="margin-top:8px">En husholdning kan ha én eller flere elever – du bestemmer. Startbonusen på ${kr(I.startbonus)} settes inn automatisk, og det lages en PIN-kode.</p>
       </div>
       ${nye ? `<div class="kort" style="border:3px dashed var(--gul)"><div class="rad mellom"><h2 style="margin:0">Nye PIN-koder</h2><button class="sek" onclick="window.print()">Skriv ut</button></div>
         <p class="dempet ikke-skriv">PIN-kodene vises bare nå – skriv dem ut eller noter dem. (De lagres kryptert.)</p>

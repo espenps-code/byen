@@ -26,17 +26,17 @@
 <div class="gresskant" aria-hidden="true"></div>
 
 <main>
-  <section class="seksjon" aria-labelledby="vei-tittel">
-    <h2 id="vei-tittel">Slik blir du innbygger i byen</h2>
-    <p class="ledetekst">Dere er to og to i hver husholdning. Alt dere gjør i portalen, får følger i Minecraft – og omvendt.</p>
-    <ol class="vei">
-      <li><span class="stein" aria-hidden="true">1</span><div><h3>Signer avtalen</h3><p>Dere får en startbonus til huset og bestemmer om dere vil ha forsikring og tippe lotto.</p></div></li>
-      <li><span class="stein" aria-hidden="true">2</span><div><h3>Tegn huset</h3><p>Tegn plantegningen rute for rute, se huset fra alle sider og i 3D, og send byggesøknad. Kommunen sjekker at dere følger reglene.</p></div></li>
-      <li><span class="stein" aria-hidden="true">3</span><div><h3>Regn ut hva dere trenger</h3><p>Hvor mange blokker blir veggene? Hvor mange glassruter? Regn selv først – etterpå får dere se hvor nær dere var.</p></div></li>
-      <li><span class="stein" aria-hidden="true">4</span><div><h3>Bestill og bygg</h3><p>Handle i byggevarehandelen og regn ut totalen. Neste gang dere spiller, ligger varene i kisten på tomta.</p></div></li>
-      <li><span class="stein" aria-hidden="true">5</span><div><h3>Søk jobb</h3><p>Politi, sykehus, matbutikk eller restaurant? Skriv tre gode grunner til at akkurat du passer.</p></div></li>
-      <li><span class="stein" aria-hidden="true">6</span><div><h3>Hold styr på pengene</h3><p>Lønn, skatt, fakturaer og uventede hendelser. Før regnskap, lag budsjett og sjekk at det stemmer med banken.</p></div></li>
-      <li><span class="stein" aria-hidden="true">7</span><div><h3>Bestem i bystyret</h3><p>Vil dere ha kjæledyr eller høyere hus? Skriv lovforslag, samle støtte og stem over dem i klassen.</p></div></li>
+  <section class="seksjon" aria-labelledby="prosess-tittel">
+    <h2 id="prosess-tittel">Fra tom tomt til levende by</h2>
+    <p class="ledetekst">Elevene bor i husholdninger – alene eller sammen med andre, det bestemmer læreren. Hver økt bygger på den forrige, og alt de gjør i portalen får følger i Minecraft.</p>
+    <ol class="prosess">
+      <li><span class="stein" aria-hidden="true">1</span><h3>Avtale</h3><p>Startbonus, forsikring og lotto.</p></li>
+      <li><span class="stein" aria-hidden="true">2</span><h3>Tegne huset</h3><p>Plantegning, fasader, 3D og byggesøknad.</p></li>
+      <li><span class="stein" aria-hidden="true">3</span><h3>Regne ut</h3><p>Hvor mange blokker trengs?</p></li>
+      <li><span class="stein" aria-hidden="true">4</span><h3>Bestille og bygge</h3><p>Varene kommer i kisten på tomta.</p></li>
+      <li><span class="stein" aria-hidden="true">5</span><h3>Søke jobb</h3><p>Lønn fra byen eller fra salg.</p></li>
+      <li><span class="stein" aria-hidden="true">6</span><h3>Styre økonomien</h3><p>Regnskap, budsjett, skatt og uforutsette hendelser.</p></li>
+      <li><span class="stein" aria-hidden="true">7</span><h3>Bystyret</h3><p>Lovforslag og avstemming.</p></li>
     </ol>
   </section>
 
@@ -65,7 +65,11 @@
         <li>Lim inn ett lite program i Code Builder, så fylles alle kistene i byen.</li>
         <li>Kjør ukeoppgjør, trekk hendelseskort og lotto på tavla med ett klikk.</li>
       </ul>
-      <a class="knapp" href="laerer.html">Opprett en klasse</a>
+      <div class="handlinger">
+        <a class="knapp" href="laerer.html">Opprett en klasse</a>
+        <a class="knapp hvit skjult" id="lastNedVerden" href="verden/klassebyen.mcworld" download>Last ned byverdenen</a>
+      </div>
+      <p class="liten-tekst skjult" id="verdenInfo">Verdenen har ferdige tomter med kister og skilt. Åpne filen på en PC med Minecraft Education installert.</p>
     </div>
     <figure class="kiste" style="margin:0">
       <div class="ruter" id="kisteruter"></div>
@@ -84,6 +88,10 @@
 <script src="js/data.js"></script>
 <script src="js/ikoner.js"></script>
 <script>
+  // Vis nedlastingsknappen bare hvis verdensfilen ligger på serveren
+  fetch('verden/klassebyen.mcworld', { method: 'HEAD' }).then(r => {
+    if (r.ok) ['lastNedVerden', 'verdenInfo'].forEach(id => document.getElementById(id).classList.remove('skjult'));
+  }).catch(() => {});
   // Eksempel på en kiste med varer (egne pikselikoner)
   const ting = ['birch_planks', 'birch_planks', 'cherry_door', 'glass_pane', 'bed', 'lantern', 'red_candle', 'chest', 'bookshelf', 'red_tulip', 'oak_sapling', 'emerald'];
   document.getElementById('kisteruter').innerHTML = ting.map(mc => `<div class="rute">${Ikon.mc(mc, 14)}</div>`).join('');
