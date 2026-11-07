@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Byen vår – lærer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/stil.css">
+</head>
+<body>
+<header class="topp">
+  <div>
+    <div class="logo"><span id="logoIkon"></span><span>Byen vår</span></div>
+    <div class="undertittel" id="byNavnTopp"></div>
+  </div>
+  <div class="hoyre"><span class="modus" id="modus"></span></div>
+</header>
+
+<div id="rot"><div class="innlogging"><div class="kort">Laster …</div></div></div>
+
+<script>window.SIDE = 'laerer';</script>
+<script src="js/oppsett.js"></script>
+<script>
+  if (window.BYEN_VAR_OPPSETT && window.BYEN_VAR_OPPSETT.firebase) {
+    ['firebase-app-compat', 'firebase-auth-compat', 'firebase-database-compat'].forEach(f =>
+      document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/' + f + '.js"><\/script>'));
+  }
+</script>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ikoner.js"></script>
+<script src="js/felles.js"></script>
+<script src="js/elev.js"></script>
+<script src="js/laerer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

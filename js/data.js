@@ -113,7 +113,7 @@ const TAKTRAPP = { bjork: 'bjorketrapp', morkeik: 'morkeiketrapp', kirsebaer: 'k
 /* Standardinnstillinger */
 const STANDARD_INNSTILLINGER = {
   byNavn: '', startbonus: 30000, bedriftBonus: 15000,
-  maksHoyde: 8, maksAndel: 0.67, etasjeHoyde: 4, tomtBredde: 14, tomtDybde: 14,
+  maksHoyde: 15, maksAndel: 0.67, etasjeHoyde: 4, tomtBredde: 14, tomtDybde: 14,
   forsikringPerUke: 750, lottoPerUke: 150, lottoPremie3: 20000, lottoPremie2: 1000,
   offentligLonn: 1280, smaragdVerdi: 10, visSummer: false, chatOrd: 'lever',
   kreverByggesoknad: true, laererPin: '1234'

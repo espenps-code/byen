@@ -1,21 +1,20 @@
 /* =========================================================
    OPPSETT FOR BYEN VÅR
    ---------------------------------------------------------
-   firebase: null  -> alt lagres lokalt i nettleseren (bra for testing)
-   firebase: {...} -> lim inn firebaseConfig fra Firebase-konsollen
-   byId: navnet på byen i databasen (bare små bokstaver, tall og bindestrek).
-         Kan overstyres i lenken: index.html?by=7a-2027
+   firebase: null  -> alt lagres lokalt i nettleseren (testmodus)
+   firebase: {...} -> data lagres i Firebase (prosjekt «byen-var», EU/Belgia)
+   Klassene opprettes på laerer.html. Elevlenken er elev.html?by=<klasse-id>.
+   Merk: apiKey for Firebase på nettsider er ikke hemmelig – sikkerheten
+   ligger i databasereglene (database.rules.json).
    ========================================================= */
 window.BYEN_VAR_OPPSETT = {
-  firebase: null,
-  /* Eksempel:
   firebase: {
-    apiKey: "AIza...",
+    apiKey: "AIzaSyCqqS-PaU-Ek3qyRVoIOKkvSFOjwbSs-Ps",
     authDomain: "byen-var.firebaseapp.com",
     databaseURL: "https://byen-var-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "byen-var",
-    appId: "1:123:web:abc"
-  },
-  */
-  byId: 'min-by'
+    storageBucket: "byen-var.firebasestorage.app",
+    messagingSenderId: "27164020021",
+    appId: "1:27164020021:web:1655e8f39fd1d4f40c507c"
+  }
 };

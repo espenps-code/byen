@@ -90,6 +90,12 @@
           ".write": "auth != null"
         }
       }
+    },
+    "laerere": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
     }
   }
 }

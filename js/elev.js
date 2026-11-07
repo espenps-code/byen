@@ -14,10 +14,12 @@ const VERKTOY = [
 ];
 
 const Elev = {
-  kontoId: sessionStorage.getItem('byenvar_elev') || null,
+  kontoId: sessionStorage.getItem('byenvar_elev_' + Store.byId) || null,
   side: 'hjem',
   kurv: {}, feilForsok: 0, kategori: 'alle', sok: '', handleFor: null,
-  tegning: null, verktoy: 'v', etasje: 0, rektangel: true, aapnePost: new Set(),
+  tegning: null, verktoy: 'v', etasje: 0, rektangel: true, aapnePost: new Set(), fasadeSide: 'sor',
+  settFasadeTegn(s) { this.fasadeSide = s; this.oppdaterAnalyse(); },
+  settFasadeVis(s) { this.fasadeSide = s; this.tegn(); },
 
   get konto() { return this.kontoId ? B.konto(this.kontoId) : null; },
 
@@ -66,6 +68,11 @@ const Elev = {
 
   /* ---------- Innlogging ---------- */
   tegnInnlogging() {
+    if (!Store.byId || !Store.hent('innstillinger')) {
+      $('#rot').innerHTML = `<div class="innlogging"><div class="kort" style="text-align:center"><h2>Finner ikke klassen</h2>
+        <p>Bruk lenken eller QR-koden du har fått av læreren din.</p><p class="dempet">Lenken ser omtrent slik ut: …/elev.html?by=galtvang-7a-k3x9</p></div></div>`;
+      return;
+    }
     const hh = B.kontoer('hh');
     $('#rot').innerHTML = `<div class="innlogging"><div class="kort">
       <h2>Logg inn</h2>
@@ -82,11 +89,11 @@ const Elev = {
   loggInn() {
     const id = $('#velgHh').value, k = B.konto(id), pin = $('#elevPin').value;
     if (!k || k.pinHash !== hashPin(pin, id)) { $('#innFeil').innerHTML = '<div class="melding feil">Feil PIN-kode. Prøv igjen.</div>'; return; }
-    this.kontoId = id; sessionStorage.setItem('byenvar_elev', id);
+    this.kontoId = id; sessionStorage.setItem('byenvar_elev_' + Store.byId, id);
     this.side = 'hjem'; this.kurv = {}; this.tegning = null; this.handleFor = null;
     this.tegn();
   },
-  loggUt() { this.kontoId = null; sessionStorage.removeItem('byenvar_elev'); this.tegn(); },
+  loggUt() { this.kontoId = null; sessionStorage.removeItem('byenvar_elev_' + Store.byId); this.tegn(); },
 
   /* ---------- Avtale ---------- */
   tegnAvtale() {
@@ -269,8 +276,10 @@ const Elev = {
       <div class="kort"><h2>Tegningene</h2>
         <div class="tegninger">
           ${s.etasjer.map((e2, i) => e2 && e2.some(r => /[vdwrs]/.test(r)) ? `<figure>${UI.planSvg(e2, 16)}<figcaption>Plantegning ${i + 1}. etasje</figcaption></figure>` : '').join('')}
-          <figure>${UI.fasadeSvg(s, I, 12)}<figcaption>Fasade forfra</figcaption></figure>
         </div>
+        <h3>Fasader</h3>
+        ${UI.fasadeVelger(s, I, this.fasadeSide, 'Elev.settFasadeVis', 12)}
+        <p style="margin-top:12px"><button class="bla" onclick="UI.vis3d(Store.hent('soknader/'+Elev.kontoId), B.innst())">Se huset i 3D</button></p>
         <p style="margin-top:12px">Materiale: <b>${esc(mat ? mat.navn : '?')}</b> · Tak: <b>${s.tak === 'skratt' ? 'Skrått' : 'Flatt'}</b> · ${a.antEtg} etasje${a.antEtg === 1 ? '' : 'r'} · Bebygd areal: <b>${a.bebygd} ruter</b></p>
       </div>
       ${godkjent ? `
@@ -387,7 +396,8 @@ const Elev = {
     const I = B.innst(), a = B.analyser(this.tegning, I);
     el.innerHTML = `<h2>Sjekk av reglene</h2>
       ${a.sjekker.map(s => `<div class="sjekk ${s.ok ? 'ja' : 'nei'}"><span class="pr">${s.ok ? '✓' : '!'}</span><span>${s.tekst}</span></div>`).join('')}
-      ${a.antEtg ? `<h3>Fasade forfra</h3>${UI.fasadeSvg(this.tegning, I, 10)}` : ''}`;
+      ${a.antEtg ? `<h3>Fasader</h3>${UI.fasadeVelger(this.tegning, I, this.fasadeSide, 'Elev.settFasadeTegn', 10)}
+        <p style="margin-top:10px"><button class="bla sma" onclick="UI.vis3d(Elev.tegning, B.innst())">Se huset i 3D</button></p>` : ''}`;
   },
   autolagre() {
     clearTimeout(this._lagreTimer);

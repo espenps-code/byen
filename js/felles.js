@@ -253,47 +253,199 @@ const UI = {
     for (let i = 0; i <= d; i++) r += `<line x1="0" y1="${i * celle}" x2="${b * celle}" y2="${i * celle}" stroke="#00000014"/>`;
     return r + '</svg>';
   },
-  /* Fasade sett forfra (fra sør = nederste rad) */
-  fasadeSvg(soknad, innst, celle = 14) {
-    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrs]/.test(r)));
+  /* Snur tegningen så valgt side vender mot betrakteren (nederste rad = nærmest) */
+  roter(rader, side) {
+    const D = rader.length, Bb = rader[0].length;
+    const ny = (b, d, f) => Array.from({ length: d }, (_, y) => Array.from({ length: b }, (_, x) => f(x, y)).join(''));
+    if (side === 'nord') return ny(Bb, D, (x, y) => rader[D - 1 - y][Bb - 1 - x]);
+    if (side === 'ost') return ny(D, Bb, (x, y) => rader[D - 1 - x][y]);
+    if (side === 'vest') return ny(D, Bb, (x, y) => rader[x][Bb - 1 - y]);
+    return rader;
+  },
+  materialFarge(id) {
+    return ({ bjork: '#e6d8a8', morkeik: '#5a3c22', kirsebaer: '#e7b3ad', hvitbetong: '#eceeee', graabetong: '#4d5157', steinmur: '#8f8f8f' })[id] || '#b8925a';
+  },
+  morkere(hex, f = 0.75) {
+    const n = parseInt(hex.slice(1), 16);
+    return '#' + [16, 8, 0].map(s => Math.round(((n >> s) & 255) * f).toString(16).padStart(2, '0')).join('');
+  },
+  /* Fasade sett fra én side: 'sor' (forfra), 'ost', 'nord', 'vest' */
+  fasadeSvg(soknad, innst, celle = 14, side = 'sor') {
+    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrs]/.test(r))).map(e => this.roter(e, side));
     if (!etg.length) return '';
     const b = etg[0][0].length, vh = innst.etasjeHoyde - 1;
     const skratt = soknad.tak === 'skratt';
-    // Fremste rute i hver kolonne per etasje
+    const vegg = this.materialFarge(soknad.materiale), kant = this.morkere(vegg, 0.78), takF = '#4a4a52', takL = '#6a6a74';
     const front = e => Array.from({ length: b }, (_, x) => { for (let y = e.length - 1; y >= 0; y--) if (e[y][x] !== '.') return e[y][x]; return null; });
     const fr = etg.map(front);
-    const kol = fr[fr.length - 1].map((c, x) => c ? x : -1).filter(x => x >= 0);
-    const x0 = Math.min(...fr[0].map((c, x) => c ? x : 99)), x1 = Math.max(...fr[0].map((c, x) => c ? x : -1));
-    const tx0 = kol.length ? Math.min(...kol) : x0, tx1 = kol.length ? Math.max(...kol) : x1;
-    const takH = skratt ? Math.ceil((tx1 - tx0 + 1) / 2) : 1;
+    // Takets mål: øverste etasje, bredde sett forfra og dybde
+    const topp = etg[etg.length - 1];
+    let x0 = 99, x1 = -1, y0 = 99, y1 = -1;
+    topp.forEach((r, y) => [...r].forEach((c, x) => { if (c !== '.') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+    const tw = x1 - x0 + 1, td = y1 - y0 + 1, kort = Math.min(tw, td);
+    const takH = skratt ? Math.ceil(kort / 2) : 1;
     const hoyde = etg.length * (vh + 1) + takH;
     const W = (b + 2) * celle, H = (hoyde + 1) * celle;
+    const rute = (x, y, f) => `<rect x="${(x + 1) * celle}" y="${y}" width="${celle}" height="${celle}" fill="${f}" stroke="#0000001f"/>`;
     let r = `<svg class="fasade" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#dceefa"/>`;
     r += `<rect y="${H - celle}" width="${W}" height="${celle}" fill="#6ab04c"/>`;
     let bunn = H - celle;
-    fr.forEach((rad, i) => {
+    fr.forEach(rad => {
       rad.forEach((c, x) => {
         if (!c) return;
-        for (let h = 0; h < vh + 1; h++) {
-          const y = bunn - (h + 1) * celle;
-          let f = '#b8925a';
-          if (h === 0 || h === vh) f = '#8a6438';
-          if (c === 'd' && (h === 1 || h === 2)) f = '#5a3c22';
-          if (c === 'w' && (h === 1 || h === 2)) f = '#9fd6ea';
-          r += `<rect x="${(x + 1) * celle}" y="${y}" width="${celle}" height="${celle}" fill="${f}" stroke="#0000001a"/>`;
+        for (let h = 0; h <= vh; h++) {
+          let f = h === 0 ? kant : vegg;
+          if (c === 'd' && (h === 1 || h === 2)) f = '#6b4a2b';
+          if (c === 'w' && h >= 2 && h <= 3 && h <= vh) f = '#9fd6ea';
+          r += rute(x, bunn - (h + 1) * celle, f);
         }
       });
       bunn -= (vh + 1) * celle;
     });
-    if (skratt) {
-      const w = tx1 - tx0 + 1;
+    if (!skratt) {
+      for (let x = x0; x <= x1; x++) r += rute(x, bunn - celle, takF);
+    } else if (tw <= td) {
+      // Gavlen vender mot oss: trekant
       for (let k = 0; k < takH; k++) {
-        const fra = tx0 + k, til = tx1 - k;
-        for (let x = fra; x <= til; x++) r += `<rect x="${(x + 1) * celle}" y="${bunn - (k + 1) * celle}" width="${celle}" height="${celle}" fill="${x === fra || x === til ? '#4a4a52' : '#8a6438'}" stroke="#0000001a"/>`;
+        const fra = x0 + k, til = x1 - k;
+        for (let x = fra; x <= til; x++) r += rute(x, bunn - (k + 1) * celle, x === fra || x === til ? takF : vegg);
       }
     } else {
-      for (let x = tx0; x <= tx1; x++) r += `<rect x="${(x + 1) * celle}" y="${bunn - celle}" width="${celle}" height="${celle}" fill="#4a4a52" stroke="#0000001a"/>`;
+      // Langsiden vender mot oss: takflaten
+      for (let k = 0; k < takH; k++) for (let x = x0; x <= x1; x++) r += rute(x, bunn - (k + 1) * celle, k % 2 ? takL : takF);
     }
     return r + '</svg>';
+  },
+  fasadeVelger(soknad, innst, valgt, onclick, celle = 10) {
+    const sider = [['sor', 'Forfra (sør)'], ['ost', 'Høyre (øst)'], ['nord', 'Bakfra (nord)'], ['vest', 'Venstre (vest)']];
+    return `<div class="chips" style="margin-bottom:8px">${sider.map(([s, n]) => `<button class="${valgt === s ? 'aktiv' : ''}" onclick="${onclick}('${s}')">${n}</button>`).join('')}</div>
+      ${this.fasadeSvg(soknad, innst, celle, valgt)}`;
+  },
+
+  /* =========================================================
+     3D-VISNING (three.js lastes ved behov)
+     ========================================================= */
+  voksler(soknad, innst) {
+    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrs]/.test(r)));
+    const vh = innst.etasjeHoyde - 1, v = [];
+    etg.forEach((e, f) => {
+      const base = f * innst.etasjeHoyde;
+      e.forEach((rad, z) => [...rad].forEach((c, x) => {
+        if (c === '.') return;
+        v.push({ x, y: base, z, t: 'gulv' });
+        if (c === 'v' || c === 'd' || c === 'w') for (let h = 1; h <= vh; h++) {
+          let t = 'vegg';
+          if (c === 'd' && h <= 2) t = 'dor';
+          if (c === 'w' && h >= 2 && h <= 3) t = 'glass';
+          v.push({ x, y: base + h, z, t });
+        }
+      }));
+    });
+    if (!etg.length) return v;
+    const topp = etg[etg.length - 1], toppBase = (etg.length - 1) * innst.etasjeHoyde;
+    if (soknad.tak !== 'skratt') {
+      topp.forEach((rad, z) => [...rad].forEach((c, x) => { if (c !== '.') v.push({ x, y: toppBase + vh + 1, z, t: 'tak' }); }));
+      return v;
+    }
+    let x0 = 99, x1 = -1, z0 = 99, z1 = -1;
+    topp.forEach((r, z) => [...r].forEach((c, x) => { if (c !== '.') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); } }));
+    const bx = x1 - x0 + 1, bz = z1 - z0 + 1, langsX = bx >= bz, kort = Math.min(bx, bz), takH = Math.ceil(kort / 2);
+    for (let k = 0; k < takH; k++) {
+      const y = toppBase + vh + 1 + k;
+      for (let i = 0; i < kort; i++) {
+        const avstand = Math.min(i, kort - 1 - i);
+        if (avstand < k) continue;
+        const kantRad = avstand === k;
+        const L = langsX ? bx : bz;
+        for (let j = 0; j < L; j++) {
+          const endeGavl = j === 0 || j === L - 1;
+          if (!kantRad && !endeGavl) continue;
+          const x = langsX ? x0 + j : x0 + i, z = langsX ? z0 + i : z0 + j;
+          v.push({ x, y, z, t: kantRad ? 'tak' : 'gavl' });
+        }
+      }
+    }
+    return v;
+  },
+  lastThree() {
+    if (window.THREE) return Promise.resolve();
+    return new Promise((ok, feil) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+      s.onload = ok; s.onerror = () => feil(new Error('Fikk ikke lastet 3D-motoren (krever internett).'));
+      document.head.appendChild(s);
+    });
+  },
+  async vis3d(soknad, innst, tittel = 'Huset i 3D') {
+    const el = document.createElement('div');
+    el.className = 'tavle tredje';
+    el.innerHTML = `<button class="sek lukk">Lukk</button><h2 style="color:#fff;margin:0 0 8px">${esc(tittel)}</h2>
+      <p style="opacity:.8;margin:0 0 12px">Dra for å snu huset · rull eller knip for å zoome</p><div class="lerret3d"><div class="laster3d"><div class="klosser"><span></span><span></span><span></span></div><p>Bygger huset …</p></div></div>
+      <div class="rad" style="margin-top:12px;justify-content:center"><button class="sek" data-r="-1">↺ Snu</button><button class="sek" data-r="1">Snu ↻</button><label style="color:#fff"><input type="checkbox" class="skjulTak"> Ta av taket</label></div>`;
+    document.body.appendChild(el);
+    let stopp = false;
+    el.querySelector('.lukk').onclick = () => { stopp = true; el.remove(); };
+    try { await this.lastThree(); } catch (e) { el.querySelector('.lerret3d').innerHTML = `<p>${esc(e.message)}</p>`; return; }
+    const T = window.THREE, boks = el.querySelector('.lerret3d');
+    const bredde = Math.min(window.innerWidth - 40, 900), hoyde = Math.min(window.innerHeight - 220, 560);
+    const renderer = new T.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.setSize(bredde, hoyde);
+    boks.innerHTML = '';
+    boks.appendChild(renderer.domElement);
+    const scene = new T.Scene(); scene.background = new T.Color('#bfe0f5');
+    const kamera = new T.PerspectiveCamera(45, bredde / hoyde, 0.1, 500);
+    scene.add(new T.HemisphereLight(0xffffff, 0x88aa66, 0.85));
+    const sol = new T.DirectionalLight(0xffffff, 0.7); sol.position.set(20, 40, 25); scene.add(sol);
+    const rader = soknad.etasjer[0], TB = rader[0].length, TD = rader.length;
+    const bakke = new T.Mesh(new T.BoxGeometry(TB + 6, 1, TD + 6), new T.MeshLambertMaterial({ color: '#7cbd52' }));
+    bakke.position.set(TB / 2, -1, TD / 2); scene.add(bakke);
+    const tomt = new T.Mesh(new T.BoxGeometry(TB, 0.04, TD), new T.MeshLambertMaterial({ color: '#94cc6c' }));
+    tomt.position.set(TB / 2, -0.48, TD / 2); scene.add(tomt);
+    const vegg = this.materialFarge(soknad.materiale);
+    const mat = {
+      vegg: new T.MeshLambertMaterial({ color: vegg }), gulv: new T.MeshLambertMaterial({ color: this.morkere(vegg, 0.8) }),
+      dor: new T.MeshLambertMaterial({ color: '#6b4a2b' }), glass: new T.MeshLambertMaterial({ color: '#9fd6ea', transparent: true, opacity: 0.45 }),
+      tak: new T.MeshLambertMaterial({ color: '#4a4a52' })
+    };
+    mat.gavl = mat.vegg;
+    const geo = new T.BoxGeometry(1, 1, 1), tak = [];
+    const v = this.voksler(soknad, innst);
+    const per = {}; v.forEach(b => (per[b.t] = per[b.t] || []).push(b));
+    Object.entries(per).forEach(([t, liste]) => {
+      const m = new T.InstancedMesh(geo, mat[t], liste.length), d = new T.Object3D();
+      liste.forEach((b, i) => { d.position.set(b.x + 0.5, b.y, b.z + 0.5); d.updateMatrix(); m.setMatrixAt(i, d.matrix); });
+      scene.add(m); if (t === 'tak' || t === 'gavl') tak.push(m);
+    });
+    const maksY = v.reduce((s, b) => Math.max(s, b.y), 0);
+    // Taklaget på flatt tak og øverste del av skråtak skjules med «Ta av taket»
+    el.querySelector('.skjulTak').onchange = e => { tak.forEach(m => { m.visible = !e.target.checked; }); };
+    const senter = new T.Vector3(TB / 2, maksY / 2, TD / 2);
+    let vinkel = 0.7, hevning = 0.55, avstand = Math.max(TB, TD, maksY) * 1.9;
+    const plasser = () => {
+      kamera.position.set(senter.x + avstand * Math.cos(hevning) * Math.sin(vinkel), senter.y + avstand * Math.sin(hevning), senter.z + avstand * Math.cos(hevning) * Math.cos(vinkel));
+      kamera.lookAt(senter);
+    };
+    let drar = null, knip = null;
+    const c = renderer.domElement; c.style.touchAction = 'none'; c.style.borderRadius = '12px';
+    const pekere = new Map();
+    c.addEventListener('pointerdown', e => { c.setPointerCapture(e.pointerId); pekere.set(e.pointerId, [e.clientX, e.clientY]); drar = [e.clientX, e.clientY]; });
+    c.addEventListener('pointermove', e => {
+      if (!pekere.has(e.pointerId)) return;
+      pekere.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pekere.size === 2) {
+        const [a, b] = [...pekere.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (knip) avstand = Math.min(150, Math.max(6, avstand * knip / d));
+        knip = d; return;
+      }
+      if (!drar) return;
+      vinkel -= (e.clientX - drar[0]) * 0.008; hevning = Math.min(1.45, Math.max(0.05, hevning + (e.clientY - drar[1]) * 0.006));
+      drar = [e.clientX, e.clientY];
+    });
+    const slipp = e => { pekere.delete(e.pointerId); knip = null; drar = pekere.size ? [...pekere.values()][0] : null; };
+    c.addEventListener('pointerup', slipp); c.addEventListener('pointercancel', slipp);
+    c.addEventListener('wheel', e => { e.preventDefault(); avstand = Math.min(150, Math.max(6, avstand * (e.deltaY > 0 ? 1.1 : 0.9))); }, { passive: false });
+    el.querySelectorAll('[data-r]').forEach(k => { k.onclick = () => { vinkel += Number(k.dataset.r) * Math.PI / 2; }; });
+    const tegn = () => { if (stopp) { renderer.dispose(); return; } plasser(); renderer.render(scene, kamera); requestAnimationFrame(tegn); };
+    tegn();
   }
 };

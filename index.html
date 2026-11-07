@@ -10,35 +10,17 @@
 </head>
 <body>
 <header class="topp">
-  <div>
-    <div class="logo"><span id="logoIkon"></span><span>Byen vår</span></div>
-    <div class="undertittel" id="byNavnTopp"></div>
-  </div>
-  <div class="hoyre">
-    <span class="modus" id="modus"></span>
-    <div class="rolle">
-      <button id="rolleElev" class="aktiv" onclick="App.rolle('elev')">Elev</button>
-      <button id="rolleLaerer" onclick="App.rolle('laerer')">Lærer</button>
-    </div>
-  </div>
+  <div><div class="logo"><span id="logoIkon"></span><span>Byen vår</span></div><div class="undertittel">Bygg, bo og bestem i Minecraft Education</div></div>
 </header>
-
-<div id="rot"><div class="innlogging"><div class="kort">Laster …</div></div></div>
-
-<!-- Firebase lastes bare hvis det er satt opp i js/oppsett.js -->
-<script src="js/oppsett.js"></script>
-<script>
-  if (window.BYEN_VAR_OPPSETT && window.BYEN_VAR_OPPSETT.firebase) {
-    ['firebase-app-compat', 'firebase-auth-compat', 'firebase-database-compat'].forEach(f =>
-      document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/' + f + '.js"><\/script>'));
-  }
-</script>
-<script src="js/data.js"></script>
-<script src="js/store.js"></script>
-<script src="js/ikoner.js"></script>
-<script src="js/felles.js"></script>
-<script src="js/elev.js"></script>
-<script src="js/laerer.js"></script>
-<script src="js/app.js"></script>
+<div class="innlogging" style="max-width:560px">
+  <div class="kort" style="text-align:center">
+    <h1 style="color:var(--jord-mork)">Velkommen!</h1>
+    <p>Er du <b>elev</b>? Bruk lenken eller QR-koden du har fått av læreren din.</p>
+    <p style="margin:22px 0"><a class="knapp" href="laerer.html">Jeg er lærer</a></p>
+    <p class="dempet">Lærere oppretter klasser og deler en egen elevlenke med hver klasse.</p>
+  </div>
+</div>
+<script src="js/data.js"></script><script src="js/ikoner.js"></script>
+<script>document.getElementById('logoIkon').innerHTML = Ikon.mc('birch_planks');</script>
 </body>
 </html>

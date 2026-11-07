@@ -2,14 +2,22 @@
    LÆRERSIDEN («Bysjefen»)
    ========================================================= */
 const Laerer = {
-  inne: sessionStorage.getItem('byenvar_laerer') === '1',
+  inne: sessionStorage.getItem('byenvar_laerer_' + Store.byId) === '1',
   side: 'oversikt',
   valgtKonto: null,
   nyePin: {},
+  fasadeSide: 'sor',
+  settFasade(s) { this.fasadeSide = s; this.tegn(); },
 
   tegn() {
-    if (!this.inne) return this.tegnInnlogging();
-    if (Store.firebaseModus && Store.hent('laererUid') && Store.hent('laererUid') !== Store.uid) { this.inne = false; return this.tegnInnlogging(); }
+    // Firebase: lærer må være logget inn med e-post. Lokalt: PIN per klasse.
+    if (Store.firebaseModus && !Store.erLaerer) return this.tegnInnlogging();
+    if (!Store.byId) return this.tegnKlasser();
+    if (Store.firebaseModus) {
+      const eier = Store.hent('laererUid');
+      if (!eier) return this.tegnFeil('Fant ikke klassen', 'Klassen finnes ikke, eller den er slettet.');
+      if (eier !== Store.uid) return this.tegnFeil('Ikke din klasse', 'Du er logget inn med en annen lærerkonto enn den som eier denne klassen.');
+    } else if (!this.inne) return this.tegnInnlogging();
     const sider = {
       oversikt: 'sideOversikt', soknader: 'sideSoknader', bestillinger: 'sideBestillinger', levering: 'sideLevering',
       bank: 'sideBank', uke: 'sideUke', post: 'sidePost', hendelser: 'sideHendelser', lotto: 'sideLotto',
@@ -17,6 +25,7 @@ const Laerer = {
     };
     $('#rot').innerHTML = `<div class="app"><nav class="meny" id="lMeny"></nav><main class="innhold">${this[sider[this.side] || 'sideOversikt']()}</main></div>`;
     this.tegnMeny();
+    this.tegnQr();
   },
   gaaTil(s) { this.side = s; this.tegn(); window.scrollTo({ top: 0 }); },
   ventende() {
@@ -43,6 +52,8 @@ const Laerer = {
       ${p('jobber', '💼', 'Jobber og bedrifter')}${p('bystyre', '🏛️', 'Bystyret')}
       <div class="skille"></div>
       ${p('kontoer', '🏠', 'Husholdninger')}${p('katalog', '📋', 'Varekatalog')}${p('innstillinger', '⚙️', 'Innstillinger')}
+      <div class="skille"></div>
+      <button class="punkt" onclick="location.href='laerer.html'"><span class="ik">🗂️</span>Mine klasser</button>
       <button class="punkt" onclick="Laerer.loggUt()"><span class="ik">🚪</span>Logg ut</button>`;
   },
 
@@ -53,23 +64,86 @@ const Laerer = {
       ${fb ? `<label class="felt" for="lEpost">E-post</label><input id="lEpost" type="email" autocomplete="username">
               <label class="felt" for="lPass">Passord</label><input id="lPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')Laerer.loggInn()">
               <p class="dempet liten" style="margin-top:8px">Bruk lærerkontoen du opprettet i Firebase (Authentication → Users).</p>`
-        : `<label class="felt" for="lPin">Lærer-PIN</label><input id="lPin" class="pin" type="password" onkeydown="if(event.key==='Enter')Laerer.loggInn()">
+        : `<p class="dempet">${esc(B.innst().byNavn || '')}</p><label class="felt" for="lPin">Lærer-PIN</label><input id="lPin" class="pin" type="password" onkeydown="if(event.key==='Enter')Laerer.loggInn()">
            <p class="dempet liten" style="margin-top:8px">Første gang er PIN-koden <b>1234</b>. Bytt den under Innstillinger.</p>`}
       <div id="lFeil"></div><p style="margin-top:14px"><button onclick="Laerer.loggInn()">Logg inn</button></p></div></div>`;
   },
   async loggInn() {
     try {
       if (Store.firebaseModus) {
-        const uid = await Store.laererLoggInn($('#lEpost').value.trim(), $('#lPass').value);
-        const eier = Store.hent('laererUid');
-        if (eier && eier !== uid) throw new Error('Denne brukeren er ikke lærer for denne byen.');
-        if (!eier) await Store.sett('laererUid', uid);
-      } else if ($('#lPin').value !== String(B.innst().laererPin)) throw new Error('Feil PIN.');
-      this.inne = true; sessionStorage.setItem('byenvar_laerer', '1');
+        await Store.laererLoggInn($('#lEpost').value.trim(), $('#lPass').value);
+        if (Store.byId) await Store.kobleTil();
+      } else {
+        if ($('#lPin').value !== String(B.innst().laererPin)) throw new Error('Feil PIN.');
+        this.inne = true; sessionStorage.setItem('byenvar_laerer_' + Store.byId, '1');
+      }
       this.tegn();
-    } catch (e) { $('#lFeil').innerHTML = `<div class="melding feil">${esc(e.message)}</div>`; }
+    } catch (e) {
+      const m = /password|user|credential/i.test(e.code || e.message) ? 'Feil e-post eller passord.' : e.message;
+      $('#lFeil').innerHTML = `<div class="melding feil">${esc(m)}</div>`;
+    }
   },
-  async loggUt() { this.inne = false; sessionStorage.removeItem('byenvar_laerer'); if (Store.firebaseModus) await Store.laererLoggUt(); this.tegn(); },
+  tegnFeil(tittel, tekst) {
+    $('#rot').innerHTML = `<div class="innlogging"><div class="kort"><h2>${esc(tittel)}</h2><p>${esc(tekst)}</p>
+      <div class="rad"><button onclick="location.href='laerer.html'">Mine klasser</button><button class="sek" onclick="Laerer.loggUt()">Logg ut</button></div></div></div>`;
+  },
+
+  /* ---------- Mine klasser ---------- */
+  eierNokkel() { return 'laerere/' + (Store.firebaseModus ? Store.uid : 'lokal') + '/byer'; },
+  async tegnKlasser() {
+    $('#rot').innerHTML = `<div class="innlogging" style="max-width:720px"><div class="kort"><h1 style="color:var(--jord-mork)">Mine klasser</h1>
+      <div id="klasseliste" class="dempet">Henter …</div></div>
+      <div class="kort"><h2>Ny klasse</h2><p class="dempet">Gi byen et navn – for eksempel «Galtvang 7A». Hver klasse får sin egen elevlenke.</p>
+        <div class="rad"><input id="nyKlasse" placeholder="Navn på byen" style="flex:1" onkeydown="if(event.key==='Enter')Laerer.nyKlasse()"><button onclick="Laerer.nyKlasse()">Opprett klasse</button></div>
+        <div id="klasseFeil"></div></div>
+      ${Store.firebaseModus ? '<p style="text-align:center"><button class="sek" onclick="Laerer.loggUt()">Logg ut</button></p>' : ''}</div>`;
+    const klasser = Object.entries(await Store.hentGlobal(this.eierNokkel()) || {}).sort((a, b) => (b[1].tid || 0) - (a[1].tid || 0));
+    $('#klasseliste').innerHTML = klasser.length ? klasser.map(([id, k]) => `<div class="brev" style="box-shadow:none;border:1px solid var(--kant);border-left-width:6px;cursor:pointer" onclick="Laerer.aapneKlasse('${id}')">
+        <div class="rad mellom"><div><div class="emne">${esc(k.navn)}</div><div class="dempet">Opprettet ${dato(k.tid)}</div></div><button class="sma">Åpne</button></div></div>`).join('')
+      : UI.tom('Du har ingen klasser ennå. Opprett den første nedenfor!');
+  },
+  aapneKlasse(id) {
+    if (!Store.firebaseModus) sessionStorage.setItem('byenvar_laerer_' + id, '1');
+    location.href = 'laerer.html?by=' + encodeURIComponent(id);
+  },
+  async nyKlasse() {
+    const navn = $('#nyKlasse').value.trim();
+    if (navn.length < 2) { $('#klasseFeil').innerHTML = '<div class="melding feil">Skriv et navn på byen.</div>'; return; }
+    const slug = navn.toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'by';
+    const id = slug + '-' + Math.random().toString(36).slice(2, 6);
+    try {
+      if (Store.firebaseModus) await Store.settIBy(id, 'laererUid', Store.uid);
+      await Store.settIBy(id, 'innstillinger/byNavn', navn);
+      await Store.settGlobal(this.eierNokkel() + '/' + id, { navn, tid: Date.now() });
+      this.aapneKlasse(id);
+    } catch (e) { $('#klasseFeil').innerHTML = `<div class="melding feil">Kunne ikke opprette klassen: ${esc(e.message)}</div>`; }
+  },
+  elevLenke() { return new URL('elev.html?by=' + Store.byId, location.href).href; },
+  delKort() {
+    const lenke = this.elevLenke();
+    return `<div class="kort"><h2>Del med elevene</h2>
+      <div class="rad" style="align-items:flex-start;gap:20px">
+        <div id="qr" style="background:#fff;padding:8px;border-radius:10px;border:1px solid var(--kant);min-width:150px;min-height:150px"></div>
+        <div class="vekst"><p>Elevene åpner denne lenken (eller skanner QR-koden med iPaden) og logger inn med husholdning og PIN-kode.</p>
+          <input value="${esc(lenke)}" readonly style="width:100%;font-size:14px" onclick="this.select()">
+          <div class="rad" style="margin-top:10px"><button onclick="UI.kopier('${esc(lenke)}',this)">Kopier lenken</button>
+            <a class="knapp" style="background:#fff;color:var(--tekst);border:1px solid var(--kant);box-shadow:0 3px 0 var(--kant)" href="${esc(lenke)}" target="_blank">Åpne elevsiden</a></div>
+          ${Store.firebaseModus ? '' : '<p class="dempet liten" style="margin-top:8px">Lokal testmodus: lenken virker bare i denne nettleseren på denne maskinen.</p>'}</div>
+      </div></div>`;
+  },
+  async tegnQr() {
+    const el = $('#qr'); if (!el || el.dataset.ferdig) return;
+    el.dataset.ferdig = '1';
+    try {
+      if (!window.QRCode) await new Promise((ok, feil) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; s.onload = ok; s.onerror = feil; document.head.appendChild(s); });
+      el.innerHTML = ''; new QRCode(el, { text: this.elevLenke(), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
+    } catch (e) { el.innerHTML = '<span class="dempet liten">QR-koden kunne ikke lages uten internett.</span>'; }
+  },
+  async loggUt() {
+    this.inne = false; sessionStorage.removeItem('byenvar_laerer_' + Store.byId);
+    if (Store.firebaseModus) await Store.laererLoggUt();
+    location.href = 'laerer.html';
+  },
 
   /* =========================================================
      OVERSIKT
@@ -79,11 +153,11 @@ const Laerer = {
     const totalt = B.kontoer().reduce((s, k) => s + B.saldo(k.id), 0);
     const stat = (tall, etikett, side, varsel) => `<div class="stat klikk ${varsel && tall ? 'varsel' : ''}" onclick="Laerer.gaaTil('${side}')"><div class="tall">${tall}</div><div class="etikett">${etikett}</div></div>`;
     const start = !hh.length ? `<div class="kort"><h2>Kom i gang</h2>
-      <div class="sjekk venter"><span class="pr">1</span><span>Gi byen et navn under <a href="#" onclick="Laerer.gaaTil('innstillinger');return false">Innstillinger</a>.</span></div>
+      <div class="sjekk venter"><span class="pr">1</span><span>Sjekk startbonus, priser og byggeregler under <a href="#" onclick="Laerer.gaaTil('innstillinger');return false">Innstillinger</a>.</span></div>
       <div class="sjekk venter"><span class="pr">2</span><span>Lag tomtene i Minecraft og legg inn husholdninger med kistekoordinater under <a href="#" onclick="Laerer.gaaTil('kontoer');return false">Husholdninger</a>.</span></div>
-      <div class="sjekk venter"><span class="pr">3</span><span>Del ut PIN-lappene. Elevene logger inn, signerer avtalen og tegner huset.</span></div>
+      <div class="sjekk venter"><span class="pr">3</span><span>Del elevlenken (eller QR-koden) og PIN-lappene. Elevene logger inn, signerer avtalen og tegner huset.</span></div>
       <div class="sjekk venter"><span class="pr">4</span><span>Kjør testprogrammet i Leveringssentralen for å sjekke at alle varene virker.</span></div></div>` : '';
-    return `<div class="sidetittel"><h1>Oversikt</h1></div>${start}
+    return `<div class="sidetittel"><h1>Oversikt</h1></div>${start}${!hh.length || !hh.some(k => k.avtale && k.avtale.signert) ? this.delKort() : ''}
       <div class="rutenett" style="margin-bottom:18px">
         ${stat(v.soknader, 'Byggesøknader venter', 'soknader', 1)}${stat(v.bestillinger, 'Bestillinger venter', 'bestillinger', 1)}
         ${stat(v.levering, 'Klar til levering', 'levering', 1)}${stat(v.bank, 'Smaragd-forespørsler', 'bank', 1)}
@@ -112,8 +186,9 @@ const Laerer = {
       return `<div class="kort"><div class="rad mellom"><h2 style="margin:0">${esc(B.kontoNavn(s.id))}</h2>${UI.merke(s.status)}</div>
         <div class="tegninger" style="margin:12px 0">
           ${s.etasjer.map((e2, i) => e2 && e2.some(r => /[vdwrs]/.test(r)) ? `<figure>${UI.planSvg(e2, 14)}<figcaption>${i + 1}. etasje</figcaption></figure>` : '').join('')}
-          <figure>${UI.fasadeSvg(s, I, 10)}<figcaption>Fasade</figcaption></figure>
         </div>
+        ${UI.fasadeVelger(s, I, this.fasadeSide, 'Laerer.settFasade', 10)}
+        <p style="margin:10px 0"><button class="bla sma" onclick="UI.vis3d(Store.hent('soknader/${s.id}'), B.innst(), '${esc(B.kontoNavn(s.id)).replace(/'/g, '')}')">Se huset i 3D</button></p>
         <p>Materiale: <b>${esc(mat ? mat.navn : '–')}</b> · Tak: <b>${s.tak === 'skratt' ? 'skrått' : 'flatt'}</b> · ${a.antEtg} etasje(r) · høyde ca. ${a.hoyde}</p>
         <div class="rutenett to">
           <div>${a.sjekker.map(x => `<div class="sjekk ${x.ok ? 'ja' : 'nei'}"><span class="pr">${x.ok ? '✓' : '!'}</span><span>${x.tekst}</span></div>`).join('')}</div>
@@ -705,15 +780,19 @@ const Laerer = {
         <tr><td><label for="i_chatOrd">Chat-ord for levering</label></td><td><input id="i_chatOrd" value="${esc(I.chatOrd)}" onchange="Laerer.settInnst('chatOrd',this.value.replace(/[^a-zA-Z0-9]/g,'')||'lever')"></td></tr>
         ${Store.firebaseModus ? '' : `<tr><td><label for="i_pin">Lærer-PIN</label></td><td><input id="i_pin" value="${esc(I.laererPin)}" onchange="Laerer.settInnst('laererPin',this.value.trim()||'1234')"></td></tr>`}
       </table></div>
+      ${this.delKort()}
       <div class="kort"><h2>Lagring</h2>
-        ${Store.firebaseModus ? `<div class="melding ok">Koblet til Firebase. By-ID: <code>${esc(Store.byId)}</code>. Elevlenke: <code>${esc(location.origin + location.pathname)}?by=${esc(Store.byId)}</code></div>`
-          : `<div class="melding advarsel"><b>Lokal testmodus:</b> Alt lagres bare i denne nettleseren. Elevene kan ikke logge inn fra egne nettbrett før Firebase er satt opp (se LES-MEG.md i mappen).</div>`}
+        ${Store.firebaseModus ? `<div class="melding ok">Koblet til Firebase. Klasse-ID: <code>${esc(Store.byId)}</code></div>`
+          : `<div class="melding advarsel"><b>Lokal testmodus:</b> Alt lagres bare i denne nettleseren.</div>`}
         <div class="rad"><button onclick="Laerer.eksporter()">Last ned sikkerhetskopi</button>
           <label class="knapp" style="background:#fff;color:var(--tekst);border:1px solid var(--kant);box-shadow:0 3px 0 var(--kant)">Gjenopprett fra fil<input type="file" accept=".json" class="skjult" onchange="Laerer.importer(this)"></label>
           <button class="rod" onclick="Laerer.nullstill()">Nullstill byen</button></div>
       </div>`;
   },
-  settInnst(felt, v) { Store.sett('innstillinger/' + felt, v); },
+  settInnst(felt, v) {
+    Store.sett('innstillinger/' + felt, v);
+    if (felt === 'byNavn') Store.settGlobal(this.eierNokkel() + '/' + Store.byId + '/navn', v);
+  },
   eksporter() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(Store.eksport(), null, 2)], { type: 'application/json' }));

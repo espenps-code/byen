@@ -1,12 +1,20 @@
 # Byen vår – portal for Minecraft Education
 
-Åpne `index.html` i nettleseren. Uten Firebase kjører portalen i **lokal testmodus**: alt lagres bare i nettleseren på den maskinen du bruker. Det holder til å teste hele opplegget selv. Elever kan ikke logge inn fra egne nettbrett før Firebase er satt opp.
+## Sidene
+
+| Side | For hvem |
+|---|---|
+| `index.html` | Forside med lenke til lærersiden |
+| `laerer.html` | Læreren: «Mine klasser», opprett ny klasse, og hele lærerverktøyet for hver klasse |
+| `elev.html?by=…` | Elevene. Hver klasse har sin egen lenke og QR-kode, som du finner under Oversikt og Innstillinger |
+
+Firebase er satt opp (prosjekt `byen-var`, database i Belgia). Lærere logger inn med e-post og passord fra **Authentication → Users** i Firebase-konsollen.
 
 ## Filer
 
 | Fil | Hva den gjør |
 |---|---|
-| `index.html` | Selve portalen |
+| `index.html`, `laerer.html`, `elev.html` | Sidene |
 | `css/stil.css` | Utseendet |
 | `js/oppsett.js` | **Her limer du inn Firebase-oppsettet** (eneste fil du må endre) |
 | `js/data.js` | Varekatalog, jobber, hendelseskort og tilbud – kan redigeres |
@@ -28,7 +36,7 @@
 8. Legg mappen ut på nettet, for eksempel GitHub Pages slik som Myntland. Legg til domenet under **Authentication → Settings → Authorized domains** hvis det ikke står der.
 9. Åpne portalen, trykk **Lærer** og logg inn med lærerkontoen. Første lærer som logger inn, blir eier av byen.
 
-Elevlenke: `https://ditt-domene/byen-var/?by=min-by`. Bytt `min-by` med `byId` i `oppsett.js`. Med `?by=7a-2027` kan du ha flere byer (klasser) i samme database.
+Opprett klasser på lærersiden. Hver klasse får en tilfeldig ID (f.eks. `galtvang-7a-k3x9`) og en egen elevlenke.
 
 ## Sikkerhet – det du bør vite
 

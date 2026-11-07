@@ -204,6 +204,15 @@ tr.sum td { font-weight: 700; border-bottom: none; }
 .tavle table { color: #fff; font-size: 24px; max-width: 900px; }
 .tavle th { color: #cde3c9; font-size: 18px; } .tavle td, .tavle th { border-color: #ffffff2a; }
 
+.tavle.tredje { background: #16301c; justify-content: flex-start; padding-top: 24px; overflow: auto; }
+.laster3d { width: min(900px, 90vw); height: min(560px, 60vh); display: grid; place-content: center; justify-items: center; gap: 14px; background: #bfe0f5; border-radius: 12px; color: #183a1f; font-weight: 700; }
+.laster3d .klosser { display: flex; gap: 10px; align-items: flex-end; height: 60px; }
+.laster3d .klosser span { width: 28px; height: 28px; background: #e7b3ad; box-shadow: inset -5px -5px 0 rgba(0,0,0,.18); animation: hopp .9s ease-in-out infinite; }
+.laster3d .klosser span:nth-child(2) { background: #e6d8a8; animation-delay: .15s; }
+.laster3d .klosser span:nth-child(3) { background: #8f8f8f; animation-delay: .3s; }
+@keyframes hopp { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-26px); } }
+.lerret3d canvas { display: block; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+
 /* ---------- Kode ---------- */
 textarea.kode { font-family: Consolas, Menlo, monospace; font-size: 13px; min-height: 300px; background: #1e1e1e; color: #e6e6e6; border-radius: 12px; border: none; }
 

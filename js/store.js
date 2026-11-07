@@ -12,7 +12,7 @@
 const Store = (() => {
   const oppsett = window.BYEN_VAR_OPPSETT || {};
   const url = new URLSearchParams(location.search);
-  const byId = (url.get('by') || oppsett.byId || 'min-by').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'min-by';
+  const byId = (url.get('by') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
   const firebaseModus = !!(oppsett.firebase && window.firebase);
   const lytt = [];
   let tre = {};
@@ -55,19 +55,31 @@ const Store = (() => {
 
   /* ---------- Firebase ---------- */
   const rot = sti => 'byer/' + byId + (sti ? '/' + deler(sti).join('/') : '');
-  function startFirebase() {
+  let tilkoblet = false;
+  function kobleTil() {
+    if (!firebaseModus || !byId || tilkoblet) return Promise.resolve();
+    tilkoblet = true;
+    return new Promise((ok, feil) => {
+      let forste = true;
+      db.ref(rot('')).on('value', snap => {
+        tre = snap.val() || {};
+        if (forste) { forste = false; ok(); }
+        varsle();
+      }, e => { tilkoblet = false; feil(e); });
+    });
+  }
+  // anonym = true: elever logges inn anonymt. Lærere logger inn med e-post.
+  function startFirebase(anonym) {
     firebase.initializeApp(oppsett.firebase);
     db = firebase.database();
     auth = firebase.auth();
     return new Promise((ok, feil) => {
-      auth.onAuthStateChanged(bruker => {
-        if (!bruker) { auth.signInAnonymously().catch(feil); return; }
-        if (klar) return;
-        db.ref(rot('')).on('value', snap => {
-          tre = snap.val() || {};
-          if (!klar) { klar = true; ok(); }
-          varsle();
-        }, feil);
+      let ferdig = false;
+      auth.onAuthStateChanged(async bruker => {
+        if (ferdig) return;
+        if (!bruker && anonym) { auth.signInAnonymously().catch(feil); return; }
+        ferdig = true;
+        try { if (bruker) await kobleTil(); klar = true; ok(); } catch (e) { feil(e); }
       });
     });
   }
@@ -76,7 +88,25 @@ const Store = (() => {
     byId, firebaseModus,
     get tre() { return tre; },
     get klar() { return klar; },
-    start() { return firebaseModus ? startFirebase() : startLokal(); },
+    start(opts = {}) { return firebaseModus ? startFirebase(!!opts.anonym) : startLokal(); },
+    kobleTil,
+    get erLaerer() { return !!(auth && auth.currentUser && !auth.currentUser.isAnonymous); },
+    // Data utenfor byen (lærerens klasseliste)
+    async hentGlobal(sti) {
+      if (firebaseModus) return (await db.ref(deler(sti).join('/')).once('value')).val();
+      try { return hentFra(JSON.parse(localStorage.getItem('byenvar2__global')) || {}, sti); } catch (e) { return undefined; }
+    },
+    async settGlobal(sti, verdi) {
+      if (firebaseModus) return db.ref(deler(sti).join('/')).set(verdi ?? null);
+      let g = {}; try { g = JSON.parse(localStorage.getItem('byenvar2__global')) || {}; } catch (e) {}
+      settI(g, sti, verdi); localStorage.setItem('byenvar2__global', JSON.stringify(g));
+    },
+    // Skriver direkte til en annen by (brukes når læreren oppretter en ny klasse)
+    async settIBy(id, sti, verdi) {
+      if (firebaseModus) return db.ref('byer/' + id + '/' + deler(sti).join('/')).set(verdi ?? null);
+      let t = {}; try { t = JSON.parse(localStorage.getItem('byenvar2_' + id)) || {}; } catch (e) {}
+      settI(t, sti, verdi); localStorage.setItem('byenvar2_' + id, JSON.stringify(t));
+    },
     hent: sti => hentFra(tre, sti),
     paMeld(fn) { lytt.push(fn); },
     nyId,
