@@ -1,0 +1,95 @@
+{
+  "rules": {
+    "byer": {
+      "$by": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid",
+        "laererUid": {
+          ".write": "auth != null && auth.provider !== 'anonymous' && (!data.exists() || data.val() === auth.uid)"
+        },
+        "innstillinger": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "katalog": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "jobber": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "ansettelser": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "lotto": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "teller": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "logg": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
+        },
+        "kontoer": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid",
+          "$konto": {
+            "avtale": {
+              ".write": "auth != null && !data.child('signert').exists()"
+            }
+          }
+        },
+        "trans": {
+          "$konto": {
+            "$t": {
+              ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('belop').isNumber() && newData.child('belop').val() < 0))"
+            }
+          }
+        },
+        "bestillinger": {
+          "$b": {
+            ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('status').val() === 'sendt'))"
+          }
+        },
+        "smaragd": {
+          "$s": {
+            ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('status').val() === 'sendt'))"
+          }
+        },
+        "soknader": {
+          "$konto": {
+            ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (data.child('status').val() !== 'godkjent' && (newData.child('status').val() === 'utkast' || newData.child('status').val() === 'sendt')))"
+          }
+        },
+        "post": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid",
+          "$konto": {
+            "$p": {
+              "svar": {
+                ".write": "auth != null && !data.exists()"
+              },
+              "lest": {
+                ".write": "auth != null"
+              }
+            }
+          }
+        },
+        "forslag": {
+          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid",
+          "$f": {
+            ".write": "auth != null && !data.exists() && newData.child('status').val() === 'samler'",
+            "stotte": {
+              ".write": "auth != null"
+            }
+          }
+        },
+        "jobbsoknader": {
+          ".write": "auth != null"
+        },
+        "regnskap": {
+          ".write": "auth != null"
+        },
+        "budsjett": {
+          ".write": "auth != null"
+        }
+      }
+    }
+  }
+}
