@@ -110,6 +110,8 @@ const Store = (() => {
     hent: sti => hentFra(tre, sti),
     paMeld(fn) { lytt.push(fn); },
     nyId,
+    // Ny unik nøkkel (samme nøkkel kan brukes på flere stier i én skriving)
+    nyNokkel(sti) { return firebaseModus ? db.ref(rot(sti)).push().key : nyId(); },
     async sett(sti, verdi) {
       if (firebaseModus) return db.ref(rot(sti)).set(verdi ?? null);
       settI(tre, sti, verdi); lagreLokalt(); varsle();

@@ -3,14 +3,14 @@
    ========================================================= */
 const BUDSJETTKAT = {
   bygg: 'Byggematerialer', interior: 'Interiør og lys', mat: 'Mat og husholdning', hage: 'Hage',
-  forsikring: 'Forsikring', lotto: 'Lotto', skatt: 'Skatt', fritid: 'Tilbud og fritid',
-  kontanter: 'Smaragder (kontanter)', annet: 'Annet'
+  forsikring: 'Forsikring', skatt: 'Skatt', boter: 'Bøter', fritid: 'Tilbud og fritid',
+  annet: 'Annet'
 };
 const VAREKAT_TIL_BUDSJETT = { bygg: 'bygg', detaljer: 'bygg', interior: 'interior', lys: 'interior', husholdning: 'mat', hage: 'hage' };
 const VERKTOY = [
   { k: 'v', navn: 'Vegg', farge: '#7a5230' }, { k: 'w', navn: 'Vindu', farge: '#7ec8e3' },
   { k: 'd', navn: 'Dør', farge: '#c98a3d' }, { k: 'r', navn: 'Rom', farge: '#f3ead6' },
-  { k: 's', navn: 'Soverom', farge: '#d9c8f0' }, { k: '.', navn: 'Viskelær', farge: '#e3efd3' }
+  { k: 's', navn: 'Soverom', farge: '#d9c8f0' }, { k: 't', navn: 'Trapp', farge: '#e07a5f' }, { k: '.', navn: 'Viskelær', farge: '#e3efd3' }
 ];
 
 const Elev = {
@@ -34,7 +34,7 @@ const Elev = {
       const status = lagret ? lagret.status : 'utkast';
       if (status === 'utkast' || status === this.tegning.status) { this.tegnMeny(); return; }
     }
-    const sider = { hjem: 'sideHjem', bygg: 'sideBygg', butikk: 'sideButikk', bank: 'sideBank', budsjett: 'sideBudsjett', regnskap: 'sideRegnskap', post: 'sidePost', jobb: 'sideJobb', bystyre: 'sideBystyre' };
+    const sider = { hjem: 'sideHjem', bygg: 'sideBygg', butikk: 'sideButikk', bank: 'sideBank', budsjett: 'sideBudsjett', regnskap: 'sideRegnskap', post: 'sidePost', jobb: 'sideJobb', bystyre: 'sideBystyre', byen: 'sideByensButikker', bedrift: 'sideMinBedrift' };
     $('#rot').innerHTML = `<div class="app"><nav class="meny" id="elevMeny"></nav><main class="innhold" id="elevInnhold">${this[sider[this.side] || 'sideHjem']()}</main></div>`;
     this.tegnMeny();
     if (this.side === 'bygg') this.monterBrett();
@@ -53,7 +53,9 @@ const Elev = {
         <div class="saldo" style="margin-top:8px">${kr(B.saldo(k.id))}</div><div class="dempet liten">på konto</div></div>
       ${punkt('hjem', '🏡', 'Hjem')}
       ${punkt('bygg', '📐', 'Byggesøknad', s && s.status === 'avvist' ? '!' : '')}
-      ${punkt('butikk', '🛒', 'Butikken')}
+      ${punkt('butikk', '🛒', 'Byggevarehandelen')}
+      ${punkt('byen', '🏪', 'Byens butikker')}
+      ${this.mineBedrifter().length ? punkt('bedrift', '🧑‍🍳', 'Min bedrift', this.mineBedrifter().reduce((n, b) => n + B.kjop(x => x.til === b.id && x.status === 'betalt').length, 0) || '') : ''}
       ${punkt('post', '✉️', 'Postkassen', ulest || '')}
       <div class="skille"></div>
       ${punkt('bank', '🏦', 'Banken')}
@@ -90,7 +92,7 @@ const Elev = {
     const id = $('#velgHh').value, k = B.konto(id), pin = $('#elevPin').value;
     if (!k || k.pinHash !== hashPin(pin, id)) { $('#innFeil').innerHTML = '<div class="melding feil">Feil PIN-kode. Prøv igjen.</div>'; return; }
     this.kontoId = id; sessionStorage.setItem('byenvar_elev_' + Store.byId, id);
-    this.side = 'hjem'; this.kurv = {}; this.tegning = null; this.handleFor = null;
+    this.side = 'hjem'; this.kurv = {}; this.tegning = null; this.handleFor = null; this.kurv2 = {}; this.kvittering = null; this.valgtButikk = null;
     this.tegn();
   },
   loggUt() { this.kontoId = null; sessionStorage.removeItem('byenvar_elev_' + Store.byId); this.tegn(); },
@@ -98,7 +100,6 @@ const Elev = {
   /* ---------- Avtale ---------- */
   tegnAvtale() {
     const I = B.innst(), k = this.konto;
-    const tall = [...Array(10).keys()];
     $('#rot').innerHTML = `<div class="innlogging" style="max-width:640px"><div class="kort">
       <h1 style="color:var(--jord-mork)">Avtale</h1>
       <p>Velkommen til ${esc(I.byNavn || 'byen')}, ${esc(B.medlemmer(k).join(' og ') || k.navn)}! Før ${this.du('dere', 'du')} kan flytte inn, må ${this.du('dere', 'du')} fylle ut avtalen.</p>
@@ -107,12 +108,6 @@ const Elev = {
       <p class="dempet">Med forsikring blir det mye billigere hvis noe går galt i huset (vannlekkasje, skadedyr …).</p>
       <div class="rad"><label><input type="radio" name="fors" value="ja"> Ja, ${this.du('vi', 'jeg')} vil ha forsikring</label>
         <label><input type="radio" name="fors" value="nei"> Nei takk</label></div>
-      <h3>Lotto – ${kr(I.lottoPerUke)} per uke</h3>
-      <p class="dempet">Hver uke trekkes tre tall. Tre rette gir ${kr(I.lottoPremie3)}${I.lottoPremie2 ? `, to rette gir ${kr(I.lottoPremie2)}` : ''}.</p>
-      <div class="rad"><label><input type="radio" name="lotto" value="ja" onchange="$('#lottoTall').classList.remove('skjult')"> Ja, ${this.du('vi', 'jeg')} tipper</label>
-        <label><input type="radio" name="lotto" value="nei" onchange="$('#lottoTall').classList.add('skjult')"> Nei takk</label></div>
-      <div id="lottoTall" class="skjult" style="margin-top:10px"><p class="dempet">Velg tre forskjellige tall:</p>
-        <div class="rad">${tall.map(t => `<label style="background:var(--flate);padding:6px 10px;border-radius:10px"><input type="checkbox" class="lt" value="${t}" onchange="Elev.begrensLotto(this)"> ${t}</label>`).join('')}</div></div>
       <h3>Regler</h3>
       <label class="sjekk"><input type="checkbox" id="regler"> ${this.du('Vi', 'Jeg')} skal følge alle reglene i byen.</label>
       <label class="sjekk"><input type="checkbox" id="respekt"> ${this.du('Vi', 'Jeg')} skal respektere de andre i byen.</label>
@@ -123,22 +118,15 @@ const Elev = {
         <button class="sek" onclick="Elev.loggUt()">Logg ut</button></div>
     </div></div>`;
   },
-  begrensLotto(boks) {
-    const valgt = [...document.querySelectorAll('.lt:checked')];
-    if (valgt.length > 3) boks.checked = false;
-  },
   async signerAvtale() {
-    const fors = document.querySelector('input[name=fors]:checked'), lotto = document.querySelector('input[name=lotto]:checked');
-    const tall = [...document.querySelectorAll('.lt:checked')].map(b => Number(b.value));
+    const fors = document.querySelector('input[name=fors]:checked');
     const feil = [];
     if (!fors) feil.push('Velg om dere vil ha forsikring.');
-    if (!lotto) feil.push('Velg om dere vil tippe lotto.');
-    if (lotto && lotto.value === 'ja' && tall.length !== 3) feil.push('Velg nøyaktig tre lottotall.');
     if (!$('#regler').checked || !$('#respekt').checked) feil.push('Reglene må godtas.');
     if ($('#signatur').value.trim().length < 2) feil.push('Skriv under med navn.');
     if (feil.length) { $('#avtaleFeil').innerHTML = `<div class="melding feil">${feil.join('<br>')}</div>`; return; }
     await Store.sett('kontoer/' + this.kontoId + '/avtale', {
-      forsikring: fors.value === 'ja', lotto: lotto.value === 'ja', tall: lotto.value === 'ja' ? tall : [],
+      forsikring: fors.value === 'ja',
       signatur: $('#signatur').value.trim(), signert: true, tid: Date.now()
     });
     UI.toast('Avtalen er signert. Velkommen!');
@@ -161,7 +149,7 @@ const Elev = {
     const D = (dere, du) => this.du(dere, du);
     // status: 'ferdig' | 'venter' | 'feil' | 'aktiv' | 'laast'
     const steg = [
-      { tittel: 'Signer avtalen', side: null, status: 'ferdig', tekst: `Avtalen er signert. Forsikring: ${k.avtale.forsikring ? 'ja' : 'nei'}. Lotto: ${k.avtale.lotto ? 'ja, tallene ' + (k.avtale.tall || []).join(', ') : 'nei'}.` },
+      { tittel: 'Signer avtalen', side: null, status: 'ferdig', tekst: `Avtalen er signert. Forsikring: ${k.avtale.forsikring ? 'ja' : 'nei'}.` },
       { tittel: 'Tegn huset', side: 'bygg', ...(!s || s.status === 'utkast' ? { status: 'aktiv', tekst: `Tegn plantegningen rute for rute, se huset fra alle sider og i 3D, og send byggesøknad.` }
         : s.status === 'sendt' ? { status: 'venter', tekst: 'Byggesøknaden er sendt. Bysjefen ser på den.' }
         : s.status === 'avvist' ? { status: 'feil', tekst: 'Byggesøknaden ble ikke godkjent. Les meldingen, rett opp og send på nytt.' }
@@ -169,7 +157,8 @@ const Elev = {
       { tittel: 'Regn ut hva ' + D('dere', 'du') + ' trenger', side: 'bygg', ...(s && s.status === 'godkjent' && est ? { status: 'ferdig', tekst: 'Estimatet er levert. Se hvor nær ' + D('dere', 'du') + ' var under Byggesøknad.' }
         : est ? { status: 'venter', tekst: 'Estimatet er sendt sammen med byggesøknaden.' }
         : { status: s && s.status !== 'utkast' ? 'aktiv' : 'laast', tekst: 'Hvor mange blokker blir veggene? Hvor mange glassruter? Regn selv før byggesøknaden sendes.' }) },
-      { tittel: 'Bestill og bygg', side: 'butikk', ...(best.some(b => b.status === 'levert') ? { status: 'ferdig', tekst: 'Varene er levert i kisten på tomta. Bygg huset slik det er tegnet!' }
+      { tittel: 'Bestill og bygg', side: 'butikk', ...(s && s.ferdigTid ? { status: 'ferdig', tekst: 'Huset har fått ferdigattest! 🏠 Gratulerer med nytt hus.' }
+        : best.some(b => b.status === 'levert') ? { status: 'venter', tekst: 'Varene er levert i kisten på tomta. Bygg huset slik det er tegnet – Bysjefen gir ferdigattest når huset er ferdig.' }
         : best.some(b => b.status === 'sendt' || b.status === 'godkjent') ? { status: 'venter', tekst: 'Bestillingen venter på levering.' }
         : { status: s && s.status === 'godkjent' ? 'aktiv' : 'laast', tekst: 'Handle i byggevarehandelen og regn ut totalen. Varene kommer i kisten på tomta.' }) },
       { tittel: 'Søk jobb', side: 'jobb', ...(!B.jobber().length ? { status: 'laast', tekst: 'Bysjefen åpner jobbene senere.' }
@@ -256,7 +245,7 @@ const Elev = {
           </div>
           <div class="verktoy">${VERKTOY.map(v => `<button class="${this.verktoy === v.k ? 'aktiv' : ''}" onclick="Elev.velgVerktoy('${v.k}', this)"><span class="prøve" style="background:${v.farge}"></span>${v.navn}</button>`).join('')}</div>
           <div class="brett-ramme"><div class="brett" id="brett"></div></div>
-          <p class="dempet liten" style="margin-top:8px">Tips: Tegn ytterveggene som et rektangel, fyll innsiden med «Rom» og «Soverom», og sett dører og vinduer i veggene. Skraverte ruter viser etasjen under.</p>
+          <p class="dempet liten" style="margin-top:8px">Tips: Tegn ytterveggene som et rektangel, fyll innsiden med «Rom» og «Soverom», og sett dører og vinduer i veggene. Har huset flere etasjer, tegner dere trappa i etasjen der den starter – ${B.innst().etasjeHoyde} ruter på rad. Skraverte ruter viser etasjen under.</p>
         </div>
         <div>
           <div class="kort">
@@ -278,6 +267,7 @@ const Elev = {
               <tr><td>Stacks byggemateriale</td><td class="tall"><input type="number" min="0" id="estStacks" value="${t.elevEstimat.stacks ?? ''}" onchange="Elev.settEstimat('stacks', this.value)"></td></tr>
               <tr><td>Dører</td><td class="tall"><input type="number" min="0" id="estDorer" value="${t.elevEstimat.dorer ?? ''}" onchange="Elev.settEstimat('dorer', this.value)"></td></tr>
               <tr><td>Glassruter</td><td class="tall"><input type="number" min="0" id="estRuter" value="${t.elevEstimat.ruter ?? ''}" onchange="Elev.settEstimat('ruter', this.value)"></td></tr>
+              <tr><td>Trapper mellom etasjene <span class="dempet liten">(0 hvis én etasje)</span></td><td class="tall"><input type="number" min="0" value="${t.elevEstimat.innertrapper ?? ''}" onchange="Elev.settEstimat('innertrapper', this.value)"></td></tr>
               ${t.tak === 'skratt' ? `<tr><td>Trapper til taket</td><td class="tall"><input type="number" min="0" value="${t.elevEstimat.trapper ?? ''}" onchange="Elev.settEstimat('trapper', this.value)"></td></tr>` : ''}
             </table>
             <label class="felt" for="estForklaring">Hvordan regnet dere?</label>
@@ -299,11 +289,12 @@ const Elev = {
     };
     return `
       <div class="sidetittel"><h1>Byggesøknad</h1></div>
+      ${s.ferdigTid ? `<div class="melding ok" style="border:3px solid var(--gress)"><b>🏠 Huset har fått ferdigattest!</b> Bysjefen har kontrollert at huset er bygget slik det er tegnet (${dato(s.ferdigTid)}).</div>` : ''}
       ${godkjent ? `<div class="melding ok"><b>Byggesøknaden er godkjent!</b> ${esc(s.melding || '')} Husk å bygge huset slik dere har tegnet det.</div>`
         : `<div class="melding advarsel"><b>Søknaden er sendt.</b> Bysjefen ser på den så snart som mulig.</div>`}
       <div class="kort"><h2>Tegningene</h2>
         <div class="tegninger">
-          ${s.etasjer.map((e2, i) => e2 && e2.some(r => /[vdwrs]/.test(r)) ? `<figure>${UI.planSvg(e2, 16)}<figcaption>Plantegning ${i + 1}. etasje</figcaption></figure>` : '').join('')}
+          ${s.etasjer.map((e2, i) => e2 && e2.some(r => /[vdwrst]/.test(r)) ? `<figure>${UI.planSvg(e2, 16)}<figcaption>Plantegning ${i + 1}. etasje</figcaption></figure>` : '').join('')}
         </div>
         <h3>Fasader</h3>
         ${UI.fasadeVelger(s, I, this.fasadeSide, 'Elev.settFasadeVis', 12)}
@@ -317,6 +308,7 @@ const Elev = {
           <tr><td>Stacks ${esc(mat ? mat.navn.toLowerCase() : '')} (${e.material} blokker)</td><td class="tall">${el.stacks ?? '–'}</td><td class="tall">${e.stacks}</td><td class="tall">${diff(el.stacks, e.stacks)}</td></tr>
           <tr><td>Dører</td><td class="tall">${el.dorer ?? '–'}</td><td class="tall">${e.dorer}</td><td class="tall">${diff(el.dorer, e.dorer)}</td></tr>
           <tr><td>Glassruter</td><td class="tall">${el.ruter ?? '–'}</td><td class="tall">${e.ruter}</td><td class="tall">${diff(el.ruter, e.ruter)}</td></tr>
+          ${e.innertrapper ? `<tr><td>Trapper mellom etasjene</td><td class="tall">${el.innertrapper ?? '–'}</td><td class="tall">${e.innertrapper}</td><td class="tall">${diff(el.innertrapper, e.innertrapper)}</td></tr>` : ''}
           ${s.tak === 'skratt' ? `<tr><td>Trapper til taket</td><td class="tall">${el.trapper ?? '–'}</td><td class="tall">${e.taktrapper}</td><td class="tall">${diff(el.trapper, e.taktrapper)}</td></tr>` : ''}
         </table>
         <p class="dempet" style="margin-top:10px">Byens estimat regner med vegger på ${I.etasjeHoyde - 1} blokker, gulv i hver etasje, dører og vinduer på 2 blokker og ${s.tak === 'skratt' ? 'skråtak med trapper' : 'flatt tak'}. Det er et overslag – det kan lønne seg å bestille litt ekstra.</p>
@@ -443,6 +435,7 @@ const Elev = {
     const feil = [];
     if (!a.ok) feil.push('Tegningen følger ikke alle reglene ennå (se sjekklisten).');
     if (e.stacks == null || e.dorer == null || e.ruter == null) feil.push('Fyll ut deres eget estimat først.');
+    if (a.antEtg > 1 && e.innertrapper == null) feil.push('Regn ut hvor mange trapper dere trenger mellom etasjene.');
     if (this.tegning.tak === 'skratt' && e.trapper == null) feil.push('Regn ut hvor mange trapper dere trenger til taket.');
     if (feil.length) { $('#sendFeil').innerHTML = `<div class="melding feil">${feil.join('<br>')}</div>`; return; }
     const { _konto, ...data } = this.tegning;
@@ -458,7 +451,7 @@ const Elev = {
     if (e.stacks) this.kurv[s.materiale] = e.stacks;
     if (e.dorer) this.kurv.eikedor = e.dorer;
     if (e.ruter) this.kurv.glassrute = e.ruter;
-    if (e.taktrapper) this.kurv[e.trappId] = e.taktrapper;
+    if (e.taktrapper + e.innertrapper) this.kurv[e.trappId] = e.taktrapper + e.innertrapper;
     this.handleFor = this.kontoId;
     this.gaaTil('butikk');
     UI.toast('Estimatet ligger i handlekurven. Juster om dere vil!');
@@ -486,14 +479,14 @@ const Elev = {
     const I = B.innst(), kontoId = this.handleFor || this.kontoId, konto = B.konto(kontoId);
     const s = Store.hent('soknader/' + this.kontoId);
     if (konto.type === 'hh' && I.kreverByggesoknad && (!s || s.status !== 'godkjent')) {
-      return `<div class="sidetittel"><h1>Butikken</h1></div>${this.kontoVelger("Elev.tegn()")}
-        <div class="kort">${UI.tom('Butikken åpner for dere når byggesøknaden er godkjent. <br><br><button onclick="Elev.gaaTil(\'bygg\')">Gå til byggesøknaden</button>')}</div>`;
+      return `<div class="sidetittel"><h1>Byggevarehandelen</h1></div>${this.kontoVelger("Elev.tegn()")}
+        <div class="kort">${UI.tom('Byggevarehandelen åpner for dere når byggesøknaden er godkjent. <br><br><button onclick="Elev.gaaTil(\'bygg\')">Gå til byggesøknaden</button>')}</div>`;
     }
     const kat = B.katalog().filter(v => v.aktiv);
     const sok = this.sok.toLowerCase();
     const vis = kat.filter(v => (this.kategori === 'alle' || v.kat === this.kategori) && (!sok || v.navn.toLowerCase().includes(sok)));
     return `
-      <div class="sidetittel"><h1>Butikken</h1><p class="dempet">Det dere bestiller nå, ligger i kisten på tomten neste gang dere spiller.</p></div>
+      <div class="sidetittel"><h1>Byggevarehandelen</h1><p class="dempet">Det dere bestiller nå, ligger i kisten på tomten neste gang dere spiller.</p></div>
       ${this.kontoVelger("Elev.tegn()")}
       <div class="butikk">
         <div>
@@ -574,7 +567,6 @@ const Elev = {
   sideBank() {
     const I = B.innst(), kontoId = this.handleFor || this.kontoId, konto = B.konto(kontoId);
     const tr = B.trans(kontoId).slice().reverse();
-    const sm = liste(Store.hent('smaragd')).filter(x => x.kontoId === kontoId).sort((a, b) => b.tid - a.tid);
     let saldo = B.saldo(kontoId);
     return `
       <div class="sidetittel"><h1>Banken</h1><p class="dempet">${konto.type === 'hh' ? 'Husholdningens konto' : 'Bedriftskonto: ' + esc(konto.navn)}</p></div>
@@ -582,33 +574,12 @@ const Elev = {
       <div class="rutenett" style="margin-bottom:18px">
         <div class="stat"><div class="tall">${kr(saldo)}</div><div class="etikett">Saldo</div></div>
         <div class="stat"><div class="tall">${kr(B.disponibelt(kontoId))}</div><div class="etikett">Disponibelt</div></div>
-        <div class="stat"><div class="tall"><span class="miniikon">${Ikon.smaragd()}</span> ${kr(I.smaragdVerdi)}</div><div class="etikett">Verdi av 1 smaragd</div></div>
       </div>
-      <div class="rutenett to">
-        <div class="kort"><h2>Ta ut smaragder</h2>
-          <p class="dempet">Smaragder er pengene i Minecraft. De leveres i kisten deres.</p>
-          <div class="rad"><input type="number" id="uttak" min="1" placeholder="Antall"><button onclick="Elev.smaragd('uttak')">Ta ut</button></div>
-          <h3>Sett inn smaragder</h3>
-          <p class="dempet">Har dere fått smaragder (f.eks. i butikken deres)? Legg dem i kisten og registrer innskuddet her.</p>
-          <div class="rad"><input type="number" id="innskudd" min="1" placeholder="Antall"><button class="sek" onclick="Elev.smaragd('innskudd')">Sett inn</button></div>
-          <div id="smSvar"></div>
-          ${sm.length ? `<h3>Mine forespørsler</h3><table>${sm.slice(0, 8).map(x => `<tr><td>${dato(x.tid)}</td><td>${x.type === 'uttak' ? 'Uttak' : 'Innskudd'} ${x.antall} smaragder</td><td class="tall">${UI.merke(x.status)}</td></tr>`).join('')}</table>` : ''}
-        </div>
         <div class="kort"><h2>Kontoutskrift</h2>
           ${tr.length ? `<div class="tabellboks"><table><tr><th>Dato</th><th>Tekst</th><th class="tall">Beløp</th><th class="tall">Saldo</th></tr>
             ${tr.map(t => { const r = `<tr><td>${dato(t.tid)}</td><td>${esc(t.tekst)}</td><td class="tall ${t.belop < 0 ? 'minus' : 'pluss'}">${t.belop > 0 ? '+' : ''}${kr(t.belop)}</td><td class="tall">${kr(saldo)}</td></tr>`; saldo -= t.belop; return r; }).join('')}
           </table></div>` : UI.tom('Ingen transaksjoner ennå.')}
-        </div>
-      </div>`;
-  },
-  async smaragd(type) {
-    const I = B.innst(), kontoId = this.handleFor || this.kontoId;
-    const n = parseInt($('#' + type).value);
-    if (!n || n < 1) { $('#smSvar').innerHTML = '<div class="melding feil">Skriv inn antall smaragder.</div>'; return; }
-    if (type === 'uttak' && n * I.smaragdVerdi > B.disponibelt(kontoId)) { $('#smSvar').innerHTML = `<div class="melding feil">Dere har ikke nok penger. ${n} smaragder koster ${kr(n * I.smaragdVerdi)}.</div>`; return; }
-    await Store.leggTil('smaragd', { kontoId, type, antall: n, tid: Date.now(), status: 'sendt', av: this.kontoId });
-    UI.toast(type === 'uttak' ? `Uttak av ${n} smaragder er sendt til banken.` : `Innskudd av ${n} smaragder er registrert.`);
-    this.tegn();
+        </div>`;
   },
 
   /* =========================================================
@@ -618,10 +589,13 @@ const Elev = {
     const res = Object.fromEntries(Object.keys(BUDSJETTKAT).map(k => [k, 0]));
     let inntekt = 0;
     B.trans(kontoId).forEach(t => {
+      const post = kat => VAREKAT_TIL_BUDSJETT[kat] || (kat in res ? kat : 'annet');
+      if (t.belop >= 0 && t.kat === 'refusjon' && t.fordeling) { Object.entries(t.fordeling).forEach(([kat, sum]) => { res[post(kat)] -= sum; }); return; }
+      if (t.belop >= 0 && t.kat === 'bot') { res.boter -= t.belop; return; } // bot trukket tilbake
       if (t.belop >= 0) { inntekt += t.belop; return; }
-      if (t.fordeling) Object.entries(t.fordeling).forEach(([kat, sum]) => { res[VAREKAT_TIL_BUDSJETT[kat] || 'annet'] += sum; });
+      if (t.fordeling) Object.entries(t.fordeling).forEach(([kat, sum]) => { res[post(kat)] += sum; });
       else {
-        const m = { forsikring: 'forsikring', lotto: 'lotto', skatt: 'skatt', tilbud: 'fritid', smaragd: 'kontanter' }[t.kat] || 'annet';
+        const m = { forsikring: 'forsikring', skatt: 'skatt', bot: 'boter', tilbud: 'fritid' }[t.kat] || 'annet';
         res[m] += -t.belop;
       }
     });
@@ -708,7 +682,7 @@ const Elev = {
   },
   brevHtml(p) {
     const aapen = this.aapnePost.has(p.id) || !p.lest;
-    const typer = { faktura: '🧾 Faktura', brev: '✉️ Brev', tilbud: '🎁 Tilbud', hendelse: '🎲 Hendelse', lonnsslipp: '💰 Lønnsslipp', lotto: '🎱 Lotto', jobb: '💼 Jobb' };
+    const typer = { faktura: '🧾 Faktura', brev: '✉️ Brev', tilbud: '🎁 Tilbud', hendelse: '🎲 Hendelse', lonnsslipp: '💰 Lønnsslipp', lotto: '🎱 Lotto', jobb: '💼 Jobb', bot: '⚖️ Bot', ferdigattest: '🏠 Ferdigattest' };
     let kropp = '';
     if (p.type === 'faktura') {
       kropp = `<div class="dempet">Fra: ${esc(p.fra || 'Byggevarehandelen')}${p.nr ? ' · Faktura nr. ' + p.nr : ''}</div>
@@ -775,7 +749,7 @@ const Elev = {
         return `<div class="kort"><h2>${esc(navn)}</h2><div class="melding ok">Du jobber i <b>${esc(jobb.navn)}</b>!</div>
           <p>${esc(jobb.beskrivelse || '')}</p>
           <p>${jobb.type === 'offentlig' ? `Lønn: <b>${kr(B.innst().offentligLonn)} i uken</b> fra byen.` : 'Lønn: Det bedriften tjener, deles på de ansatte.'}</p>
-          ${bedrift ? `<p>Bedriftens saldo: <b>${kr(B.saldo(bedrift.id))}</b> – du kan handle og se banken for bedriften under Butikken og Banken.</p>` : ''}</div>`;
+          ${bedrift ? `<p>Bedriftens saldo: <b>${kr(B.saldo(bedrift.id))}</b> – du kan handle og se banken for bedriften under Byggevarehandelen og Banken. Varer og salg styrer du under «Min bedrift».</p>` : ''}</div>`;
       }
       const valg = (s && s.valg) || ['', '', ''];
       return `<div class="kort"><h2>${esc(navn)}</h2>
@@ -797,6 +771,132 @@ const Elev = {
     await Store.sett('jobbsoknader/' + this.kontoId + '~' + i, { kontoId: this.kontoId, indeks: i, navn: B.medlemmer(this.konto)[i], valg, argumenter: arg, tid: Date.now() });
     UI.toast('Søknaden er sendt!');
   },
+
+  /* =========================================================
+     BYENS BUTIKKER – handle hos elevbedriftene
+     ========================================================= */
+  valgtButikk: null, kurv2: {}, kvittering: null, valgtBedrift: null,
+  mineBedrifter() { return this.mineKontoer().filter(k => k.type === 'bedrift'); },
+  sideByensButikker() {
+    if (this.kvittering) { const k = Store.hent('kjop/' + this.kvittering); if (k) return this.visKvittering({ id: this.kvittering, ...k }); }
+    const apne = B.apneButikker();
+    const mine = B.kjop(k => this.mineKontoer().some(m => m.id === k.fra)).slice(0, 12);
+    const b = this.valgtButikk && apne.find(x => x.id === this.valgtButikk);
+    if (!b) {
+      return `<div class="sidetittel"><h1>Byens butikker</h1><p class="dempet">Handle hos bedriftene i byen. Betal her, og vis kvitteringen til den som jobber der.</p></div>
+        ${apne.length ? `<div class="rutenett" style="margin-bottom:18px">${apne.map(x => { const bt = B.butikk(x.id), n = B.butikkVarer(x.id).filter(v => v.aktiv !== false).length; return `<button class="butikkort" onclick="Elev.valgtButikk='${x.id}';Elev.kurv2={};Elev.tegn()">
+            <span class="bnavn">${esc(x.navn)}</span><span class="dempet">${esc(bt.beskrivelse || '')}</span><span class="liten">${n} ${n === 1 ? 'vare' : 'varer og tjenester'} →</span></button>`; }).join('')}</div>`
+          : `<div class="kort">${UI.tom('Ingen butikker er åpne akkurat nå.')}</div>`}
+        <div class="kort"><h2>Mine kjøp</h2>${B.kjopTabell(mine, 'kunde', k => `<button class="sma sek" onclick="Elev.kvittering='${k.id}';Elev.tegn()">Vis</button>`)}</div>`;
+    }
+    const bt = B.butikk(b.id), varer = B.butikkVarer(b.id).filter(v => v.aktiv !== false), kurv = this.kurv2 || {};
+    const linjer = varer.filter(v => kurv[v.id] > 0), sum = linjer.reduce((s2, v) => s2 + kurv[v.id] * v.pris, 0);
+    const kontoer = this.mineKontoer().filter(k => k.id !== b.id), valgt = this.handleFor && kontoer.find(k => k.id === this.handleFor) ? this.handleFor : kontoer[0].id;
+    const medl = B.medlemmer(this.konto);
+    return `<div class="sidetittel"><div class="rad mellom"><h1>${esc(b.navn)}</h1><button class="sek sma" onclick="Elev.valgtButikk=null;Elev.tegn()">← Alle butikker</button></div>
+        ${bt.beskrivelse ? `<p class="dempet">${esc(bt.beskrivelse)}</p>` : ''}</div>
+      <div class="rutenett to">
+        <div class="kort"><h2>Meny</h2>${varer.map(v => `<div class="varelinje"><div><b>${esc(v.navn)}</b> <span class="merke ${v.type === 'tjeneste' ? 'm-godkjent' : 'm-levert'}">${v.type === 'tjeneste' ? 'Tjeneste' : 'Vare'}</span>
+            ${v.beskrivelse ? `<br><span class="dempet liten">${esc(v.beskrivelse)}</span>` : ''}</div><div class="tall"><b>${kr(v.pris)}</b></div>
+            <div class="antall"><button class="sma sek ikon" onclick="Elev.endreKurv2('${v.id}',-1)" aria-label="Færre">−</button><span>${kurv[v.id] || 0}</span><button class="sma ikon" onclick="Elev.endreKurv2('${v.id}',1)" aria-label="Flere">+</button></div></div>`).join('')}</div>
+        <div class="kort"><h2>Handlekurv</h2>${linjer.length ? `<table>${linjer.map(v => `<tr><td>${kurv[v.id]} × ${esc(v.navn)}</td><td class="tall">${kr(kurv[v.id] * v.pris)}</td></tr>`).join('')}
+            <tr class="sum"><td>Sum</td><td class="tall">${kr(sum)}</td></tr></table>
+          ${medl.length > 1 ? `<label class="felt" for="betalHvem">Hvem handler?</label><select id="betalHvem" data-lov="1">${medl.map(n => `<option>${esc(n)}</option>`).join('')}</select>` : ''}
+          <label class="felt" for="betalFra">Betal fra</label><select id="betalFra" data-lov="1">${kontoer.map(k => `<option value="${k.id}" ${k.id === valgt ? 'selected' : ''}>${k.type === 'hh' ? 'Husholdningen' : esc(k.navn)} (${kr(B.disponibelt(k.id))} disponibelt)</option>`).join('')}</select>
+          <p style="margin-top:14px"><button onclick="Elev.betal()">Betal ${kr(sum)}</button></p>` : UI.tom('Trykk + for å legge noe i handlekurven.')}</div>
+      </div>`;
+  },
+  endreKurv2(id, d) { this.kurv2[id] = Math.max(0, Math.min(99, (this.kurv2[id] || 0) + d)); this.tegn(); },
+  async betal() {
+    const b = B.konto(this.valgtButikk), kurv = this.kurv2 || {};
+    if (!b || !B.butikk(b.id).apen) { UI.toast('Butikken er stengt.', 'feil'); return; }
+    const linjer = B.butikkVarer(b.id).filter(v => v.aktiv !== false && kurv[v.id] > 0)
+      .map(v => ({ navn: v.navn, pris: Number(v.pris) || 0, antall: kurv[v.id], type: v.type || 'vare', kat: v.kat || 'annet' }));
+    const sum = linjer.reduce((s2, l) => s2 + l.antall * l.pris, 0);
+    if (!linjer.length || sum <= 0) return;
+    const fra = $('#betalFra').value, av = $('#betalHvem') ? $('#betalHvem').value : (B.medlemmer(this.konto)[0] || '');
+    if (sum > B.disponibelt(fra)) { UI.toast(`Ikke nok penger. Det koster ${kr(sum)}, og dere har ${kr(B.disponibelt(fra))} disponibelt.`, 'feil'); return; }
+    if (!confirm(`Betale ${kr(sum)} til ${b.navn}?`)) return;
+    try { this.kvittering = await B.betal(fra, b.id, linjer, av); this.kurv2 = {}; this.tegn(); }
+    catch (e) { UI.toast('Betalingen gikk ikke gjennom. Prøv igjen.', 'feil'); console.error(e); }
+  },
+  visKvittering(k) {
+    return `<div class="sidetittel"><h1>Kvittering</h1></div>
+      <div class="kort kvittering">
+        <div class="dempet">Vis denne koden til de som jobber i</div><h2 style="margin:4px 0 10px">${esc(B.kontoNavn(k.til))}</h2>
+        <div class="kode">${B.kode(k.id)}</div>
+        <p>${UI.merke(k.status)} <span class="dempet">${datoTid(k.tid)}</span></p>
+        <table style="text-align:left">${(k.linjer || []).map(l => `<tr><td>${l.antall} × ${esc(l.navn)}</td><td class="tall">${kr(l.antall * l.pris)}</td></tr>`).join('')}
+          <tr class="sum"><td>Betalt</td><td class="tall">${kr(k.sum)}</td></tr></table>
+        <p class="dempet liten">Betalt av ${esc(k.av || B.kontoNavn(k.fra))} fra ${esc(B.kontoNavn(k.fra))}. Husk å føre kjøpet i regnskapet!</p>
+        <p><button onclick="Elev.kvittering=null;Elev.tegn()">Ferdig</button></p>
+      </div>`;
+  },
+
+  /* ---------- Min bedrift: varer, priser og salg ---------- */
+  sideMinBedrift() {
+    const bed = this.mineBedrifter();
+    if (!bed.length) return `<div class="sidetittel"><h1>Min bedrift</h1></div><div class="kort">${UI.tom('Dere jobber ikke i en bedrift.')}</div>`;
+    const b = bed.find(x => x.id === this.valgtBedrift) || bed[0], bt = B.butikk(b.id), varer = B.butikkVarer(b.id);
+    const salg = B.kjop(k => k.til === b.id), venter = salg.filter(k => k.status === 'betalt');
+    const idag = new Date().toDateString(), solgtIdag = salg.filter(k => k.status !== 'refundert' && new Date(k.tid).toDateString() === idag).reduce((s2, k) => s2 + k.sum, 0);
+    const KAT = { mat: 'Mat og husholdning', fritid: 'Tilbud og fritid', interior: 'Interiør og lys', hage: 'Hage', annet: 'Annet' };
+    const katValg = (v, on) => `<select ${on}>${Object.entries(KAT).map(([k, n]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+    const typeValg = (v, on) => `<select ${on}><option value="vare" ${v !== 'tjeneste' ? 'selected' : ''}>Vare</option><option value="tjeneste" ${v === 'tjeneste' ? 'selected' : ''}>Tjeneste</option></select>`;
+    return `<div class="sidetittel"><h1>${esc(b.navn)}</h1><p class="dempet">Her styrer dere butikken: varer, priser og salg. Pengene kommer rett inn på bedriftens konto.</p></div>
+      ${bed.length > 1 ? `<div class="chips">${bed.map(x => `<button class="${x.id === b.id ? 'aktiv' : ''}" onclick="Elev.valgtBedrift='${x.id}';Elev.tegn()">${esc(x.navn)}</button>`).join('')}</div>` : ''}
+      <div class="rutenett" style="margin-bottom:18px">
+        <div class="stat"><div class="tall">${kr(B.saldo(b.id))}</div><div class="etikett">Bedriftens saldo</div></div>
+        <div class="stat"><div class="tall">${kr(solgtIdag)}</div><div class="etikett">Solgt i dag</div></div>
+        <div class="stat ${venter.length ? 'varsel' : ''}"><div class="tall">${venter.length}</div><div class="etikett">Venter på levering</div></div>
+      </div>
+      <div class="kort"><div class="rad mellom"><h2 style="margin:0">Butikken er ${bt.apen ? '<span class="pluss">åpen</span>' : '<span class="minus">stengt</span>'}</h2>
+          <button class="${bt.apen ? 'rod' : ''}" onclick="Elev.apneButikk('${b.id}',${!bt.apen})">${bt.apen ? 'Steng butikken' : 'Åpne butikken'}</button></div>
+        <label class="felt" for="bt_besk">Kort beskrivelse som kundene ser</label>
+        <input id="bt_besk" maxlength="120" style="width:100%" value="${esc(bt.beskrivelse || '')}" placeholder="F.eks.: Byens beste pizza – rett ved torget!" onchange="Elev.settButikk('${b.id}','beskrivelse',this.value.trim())">
+      </div>
+      ${venter.length ? `<div class="kort" style="border:3px solid var(--gul)"><h2>Venter på levering</h2><p class="dempet">Be kunden vise koden på kvitteringen. Gi varen i Minecraft, og trykk «Levert».</p>
+        ${venter.map(k => `<div class="varelinje"><div><span class="kodeliten">${B.kode(k.id)}</span> <b>${esc(k.av || '')}</b> <span class="dempet">${esc(B.kontoNavn(k.fra))} · ${datoTid(k.tid)}</span><br>${(k.linjer || []).map(l => `${l.antall}× ${esc(l.navn)}`).join(', ')}</div>
+          <div class="tall"><b>${kr(k.sum)}</b></div><button class="sma" onclick="Elev.levert('${k.id}')">Levert ✓</button></div>`).join('')}</div>` : ''}
+      <div class="kort"><h2>Varer og tjenester</h2>
+        ${varer.length ? `<div class="tabellboks"><table><tr><th>Navn</th><th class="tall">Pris (kr)</th><th>Type</th><th>Budsjettpost for kunden</th><th>Til salgs</th><th></th></tr>
+          ${varer.map(v => { const on = f => `onchange="Elev.endreVare('${b.id}','${v.id}','${f}',this.${f === 'aktiv' ? 'checked' : 'value'})"`; return `<tr>
+            <td><input value="${esc(v.navn)}" maxlength="40" style="width:170px" ${on('navn')}><br><input value="${esc(v.beskrivelse || '')}" maxlength="80" placeholder="Beskrivelse (valgfritt)" style="width:100%;margin-top:4px;font-size:14px" ${on('beskrivelse')}></td>
+            <td class="tall"><input type="number" min="1" max="10000" value="${v.pris}" style="width:90px" ${on('pris')}></td>
+            <td>${typeValg(v.type, on('type'))}</td><td>${katValg(v.kat, on('kat'))}</td>
+            <td><input type="checkbox" ${v.aktiv !== false ? 'checked' : ''} ${on('aktiv')}></td>
+            <td><button class="sma sek ikon" onclick="Elev.slettVare('${b.id}','${v.id}')" aria-label="Slett">✕</button></td></tr>`; }).join('')}</table></div>`
+          : `<p class="dempet">Ingen varer ennå. Legg inn det dere vil selge – både ting (pizza, blomster) og tjenester (svømmebillett, frisørtime).</p>`}
+        <h3>Ny vare eller tjeneste</h3>
+        <div class="rad" style="align-items:flex-end">
+          <div><label class="felt" for="nv_navn">Navn</label><input id="nv_navn" maxlength="40" placeholder="F.eks. Pizza"></div>
+          <div><label class="felt" for="nv_pris">Pris (kr)</label><input id="nv_pris" type="number" min="1" max="10000" style="width:100px"></div>
+          <div><label class="felt">Type</label>${typeValg('vare', 'id="nv_type"')}</div>
+          <div><label class="felt">Budsjettpost</label>${katValg(/basseng|rush|svøm|trampoline/i.test(b.navn) ? 'fritid' : 'mat', 'id="nv_kat"')}</div>
+          <button onclick="Elev.nyVare('${b.id}')">+ Legg til</button>
+        </div>
+      </div>
+      <div class="kort"><h2>Alt salg</h2>${B.kjopTabell(salg.slice(0, 40), 'selger')}</div>`;
+  },
+  apneButikk(id, apen) {
+    if (apen && !B.butikkVarer(id).some(v => v.aktiv !== false)) { UI.toast('Legg inn minst én vare før dere åpner.', 'feil'); return; }
+    Store.sett(`butikker/${id}/apen`, apen);
+  },
+  settButikk(id, felt, v) { Store.sett(`butikker/${id}/${felt}`, v); },
+  async nyVare(id) {
+    const navn = $('#nv_navn').value.trim(), pris = parseInt($('#nv_pris').value);
+    if (navn.length < 2) { UI.toast('Skriv et navn på varen.', 'feil'); return; }
+    if (!pris || pris < 1 || pris > 10000) { UI.toast('Prisen må være mellom 1 og 10 000 kr.', 'feil'); return; }
+    await Store.leggTil(`butikker/${id}/varer`, { navn, pris, type: $('#nv_type').value, kat: $('#nv_kat').value, beskrivelse: '', aktiv: true, tid: Date.now() });
+    UI.toast(navn + ' er lagt til');
+  },
+  endreVare(id, vid, felt, v) {
+    if (felt === 'pris') { v = parseInt(v); if (!v || v < 1 || v > 10000) { UI.toast('Prisen må være mellom 1 og 10 000 kr.', 'feil'); this.tegn(); return; } }
+    if (felt === 'navn' && String(v).trim().length < 2) { this.tegn(); return; }
+    Store.sett(`butikker/${id}/varer/${vid}/${felt}`, typeof v === 'string' ? v.trim() : v);
+  },
+  slettVare(id, vid) { if (confirm('Slette varen?')) Store.sett(`butikker/${id}/varer/${vid}`, null); },
+  levert(kid) { Store.sett(`kjop/${kid}/status`, 'levert'); },
 
   /* =========================================================
      BYSTYRET

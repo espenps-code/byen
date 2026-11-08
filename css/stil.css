@@ -165,6 +165,7 @@ tr.sum td { font-weight: 700; border-bottom: none; }
 .celle { width: 30px; height: 30px; background: #e3efd3; }
 .celle.c-v { background: #7a5230; } .celle.c-d { background: #c98a3d; } .celle.c-w { background: #7ec8e3; }
 .celle.c-r { background: #f3ead6; } .celle.c-s { background: #d9c8f0; }
+.celle.c-t { background: repeating-linear-gradient(0deg, #e07a5f 0 6px, #c0603f 6px 8px); }
 .celle.under { box-shadow: inset 0 0 0 30px rgba(122, 82, 48, .18); }
 .celle.forhånd { outline: 2px solid var(--gul); outline-offset: -2px; }
 .forklaring { display: flex; gap: 12px; flex-wrap: wrap; font-size: 14px; margin-top: 10px; }
@@ -249,6 +250,22 @@ textarea.kode { font-family: Consolas, Menlo, monospace; font-size: 13px; min-he
   .app { display: block; padding: 0; } .kort { box-shadow: none; }
   body { background: #fff; }
 }
+
+/* ---------- Byens butikker ---------- */
+.butikkort { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; background: var(--papir); color: var(--tekst); padding: 16px 18px; border-radius: var(--r); box-shadow: var(--skygge); border: 2px solid transparent; }
+.butikkort:hover, .butikkort:focus-visible { border-color: var(--gress); }
+.butikkort .bnavn { font-family: 'Lilita One', sans-serif; font-size: 22px; color: var(--jord-mork); }
+.butikkort .liten { color: var(--gress-mork); font-weight: 700; }
+.varelinje { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--kant); }
+.varelinje:last-child { border-bottom: 0; }
+.antall { display: flex; align-items: center; gap: 6px; }
+.antall span { min-width: 24px; text-align: center; font-weight: 700; }
+.kvittering { max-width: 440px; margin: 0 auto; text-align: center; border: 3px dashed var(--kant); }
+.kvittering table { margin: 10px 0; }
+.kvittering .kode { font-family: 'Lilita One', sans-serif; font-size: 72px; letter-spacing: .15em; color: var(--gress-mork); line-height: 1; margin: 6px 0 10px; }
+.kodeliten { font-family: 'Lilita One', sans-serif; font-size: 22px; letter-spacing: .1em; color: var(--gress-mork); margin-right: 6px; }
+.m-ferdig { background: var(--gress); color: #fff; }
+.m-betalt { background: var(--gul-lys); color: #7a5b00; } .m-refundert { background: #eee; color: #666; }
 
 /* ---------- Mobil / nettbrett ---------- */
 @media (max-width: 980px) {

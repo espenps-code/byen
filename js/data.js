@@ -37,7 +37,6 @@ const STANDARD_KATALOG = [
   ['stige','Stige','detaljer','ladder','stk',5],
   ['steinhelle','Steinhelle','detaljer','smooth_stone_slab','stk',5],
   ['skilt','Skilt','detaljer','oak_sign','stk',30,null,16],
-  ['fakkel','Fakkel','lys','torch','stk',5],
   ['lys_hvit','Stearinlys, hvitt','lys','white_candle','stk',30],
   ['lys_rod','Stearinlys, rødt','lys','red_candle','stk',30],
   ['lys_bla','Stearinlys, blått','lys','blue_candle','stk',30],
@@ -45,6 +44,7 @@ const STANDARD_KATALOG = [
   ['lys_gul','Stearinlys, gult','lys','yellow_candle','stk',30],
   ['lys_rosa','Stearinlys, rosa','lys','pink_candle','stk',30],
   ['lykt','Lykt','lys','lantern','stk',200],
+  ['endestav','Endestav (lampe)','lys','end_rod','stk',100],
   ['seng_hvit','Seng, hvit','interior','bed','stk',500,0,1],
   ['seng_rod','Seng, rød','interior','bed','stk',500,14,1],
   ['seng_gronn','Seng, grønn','interior','bed','stk',500,13,1],
@@ -114,8 +114,8 @@ const TAKTRAPP = { bjork: 'bjorketrapp', morkeik: 'morkeiketrapp', kirsebaer: 'k
 const STANDARD_INNSTILLINGER = {
   byNavn: '', startbonus: 30000, bedriftBonus: 15000,
   maksHoyde: 15, maksAndel: 0.67, etasjeHoyde: 4, tomtBredde: 14, tomtDybde: 14,
-  skatteModell: 'fordelt', skattProsent: 25, forsikringPerUke: 750, lottoPerUke: 150, lottoPremie3: 20000, lottoPremie2: 1000,
-  offentligLonn: 1280, smaragdVerdi: 10, visSummer: false, chatOrd: 'lever',
+  skatteModell: 'fordelt', skattProsent: 25, forsikringPerUke: 750, ferdigBonus: 2000,
+  offentligLonn: 1280, visSummer: false, chatOrd: 'lever',
   kreverByggesoknad: true, laererPin: '1234'
 };
 
@@ -135,6 +135,12 @@ const STANDARD_JOBBER = {
 /* Hendelseskort (fra «Hendelseskort» 2020/2021)
    type: 'penger' (belop +/-), 'forsikring' (kost med/uten forsikring),
          'skriv' (eleven skriver svar i portalen), 'oppdrag' (gjøres i Minecraft) */
+/* Regler man kan få bot for (i tillegg kommer lovene bystyret har vedtatt) */
+const BOTREGLER = [
+  'Bygget utenfor egen tomt', 'Hogget trær eller gravd i bakken', 'Brukt klosser som ikke er kjøpt',
+  'Ødelagt eller endret naboens hus', 'Bygget annerledes enn byggetegningen', 'Uhøflig eller ufin oppførsel mot andre innbyggere'
+];
+
 const HENDELSESKORT = [
   { id: 'syk_mage', type: 'oppdrag', tittel: 'Å nei!', tekst: 'Du føler deg ikke helt frisk! Du har vondt i magen og må ta deg en tur til sykehuset.' },
   { id: 'syk_fot', type: 'oppdrag', tittel: 'Å nei!', tekst: 'Du har vondt i foten og må ta deg en tur til sykehuset.' },

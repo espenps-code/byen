@@ -48,9 +48,7 @@ const B = {
   reservert(kontoId) {
     const best = liste(Store.hent('bestillinger')).filter(b => b.kontoId === kontoId && (b.status === 'sendt' || b.status === 'godkjent'))
       .reduce((s, b) => s + this.sumBestilling(b), 0);
-    const sm = liste(Store.hent('smaragd')).filter(x => x.kontoId === kontoId && x.type === 'uttak' && (x.status === 'sendt' || x.status === 'godkjent'))
-      .reduce((s, x) => s + x.antall * this.innst().smaragdVerdi, 0);
-    return best + sm;
+    return best;
   },
   disponibelt(kontoId) { return this.saldo(kontoId) - this.reservert(kontoId); },
   async trans_ny(kontoId, belop, tekst, kat, ekstra = {}) {
@@ -61,6 +59,38 @@ const B = {
   },
   post(kontoId) { return liste(Store.hent('post/' + kontoId)).sort((a, b) => b.tid - a.tid); },
   ulest(kontoId) { return this.post(kontoId).filter(p => !p.lest).length; },
+
+  /* ---------- Byens butikker (elevbedrifter) ---------- */
+  butikk(id) { return Store.hent('butikker/' + id) || {}; },
+  butikkVarer(id) { return liste(this.butikk(id).varer).sort((a, b) => (a.tid || 0) - (b.tid || 0)); },
+  apneButikker() { return this.kontoer('bedrift').filter(b => this.butikk(b.id).apen && this.butikkVarer(b.id).some(v => v.aktiv !== false)); },
+  kjop(filter) { return liste(Store.hent('kjop')).filter(filter || (() => true)).sort((a, b) => b.tid - a.tid); },
+  kode: id => String(id).replace(/[^a-z0-9]/gi, '').slice(-4).toUpperCase(),
+  // Betaling: trekk fra kjøper og sett inn hos bedriften i én og samme skriving
+  async betal(fra, til, linjer, av) {
+    const sum = linjer.reduce((s, l) => s + l.antall * l.pris, 0);
+    if (!sum || sum <= 0) throw new Error('Tomt kjøp');
+    const id = Store.nyNokkel('kjop'), tid = Date.now();
+    const tekst = linjer.map(l => `${l.antall}× ${l.navn}`).join(', ');
+    const fordeling = {};
+    linjer.forEach(l => { const k = l.kat || 'annet'; fordeling[k] = (fordeling[k] || 0) + l.antall * l.pris; });
+    await Store.flere({
+      ['kjop/' + id]: { fra, til, linjer, sum, tid, av: av || '', status: 'betalt' },
+      [`trans/${fra}/${id}`]: { tid, belop: -sum, tekst: `Kjøp hos ${this.kontoNavn(til)}: ${tekst}`, kat: 'kjop', fordeling, kjopId: id },
+      [`trans/${til}/${id}`]: { tid, belop: sum, tekst: `Salg til ${this.kontoNavn(fra)}${av ? ' (' + av + ')' : ''}: ${tekst}`, kat: 'salg', kjopId: id }
+    });
+    return id;
+  },
+  /* Tabell over kjøp/salg. rolle: 'kunde' viser butikken, 'selger' viser kunden, 'laerer' viser begge */
+  kjopTabell(rader, rolle, knapp) {
+    if (!rader.length) return UI.tom(rolle === 'kunde' ? 'Ingen kjøp ennå.' : 'Ingen salg ennå.');
+    return `<div class="tabellboks"><table><tr><th>Tid</th><th>Kode</th>${rolle !== 'kunde' ? '<th>Kunde</th>' : ''}${rolle !== 'selger' ? '<th>Butikk</th>' : ''}<th>Varer</th><th class="tall">Sum</th><th>Status</th>${knapp ? '<th></th>' : ''}</tr>
+      ${rader.map(k => `<tr><td>${datoTid(k.tid)}</td><td><b>${this.kode(k.id)}</b></td>
+        ${rolle !== 'kunde' ? `<td>${esc(this.kontoNavn(k.fra))}${k.av ? `<br><span class="dempet">${esc(k.av)}</span>` : ''}</td>` : ''}
+        ${rolle !== 'selger' ? `<td>${esc(this.kontoNavn(k.til))}</td>` : ''}
+        <td>${(k.linjer || []).map(l => `${l.antall}× ${esc(l.navn)}`).join('<br>')}</td><td class="tall">${kr(k.sum)}</td><td>${UI.merke(k.status)}</td>
+        ${knapp ? `<td>${knapp(k)}</td>` : ''}</tr>`).join('')}</table></div>`;
+  },
 
   /* ---------- Jobber ---------- */
   jobber() {
@@ -79,17 +109,42 @@ const B = {
   /* =========================================================
      BYGGESØKNAD: analyse av tegning, regelsjekk og estimat
      Rutenett: én streng per rad per etasje.
-       '.' tomt  'v' vegg  'd' dør  'w' vindu  'r' rom  's' soverom
+       '.' tomt  'v' vegg  'd' dør  'w' vindu  'r' rom  's' soverom  't' trapp
      ========================================================= */
   tomUtgave(bredde, dybde) { return Array.from({ length: dybde }, () => '.'.repeat(bredde)); },
+  /* Lengste rette rekke med trappruter i én etasje */
+  lengsteTrapp(e) {
+    let best = 0;
+    e.forEach((r, y) => [...r].forEach((c, x) => {
+      if (c !== 't') return;
+      if ((r[x - 1] || '.') !== 't') { let n = 0; while (r[x + n] === 't') n++; best = Math.max(best, n); }
+      if (((e[y - 1] || '')[x] || '.') !== 't') { let n = 0; while ((e[y + n] || '')[x] === 't') n++; best = Math.max(best, n); }
+    }));
+    return best;
+  },
+  /* Hvor høyt (1, 2, 3 …) trappetrinnet i ruta står: teller fra starten av rekka */
+  trappTrinn(e, x, y) {
+    const r = e[y];
+    const vannrett = r[x - 1] === 't' || r[x + 1] === 't';
+    let k = 0;
+    if (vannrett) while (r[x - 1 - k] === 't') k++;
+    else while ((e[y - 1 - k] || '')[x] === 't') k++;
+    return k + 1;
+  },
+  /* Antall ruter i etasjen over som står rett over trappa (der blir det hull i gulvet) */
+  hullOverTrapp(under, over) {
+    let n = 0;
+    under.forEach((r, y) => [...r].forEach((c, x) => { if (c === 't' && (over[y] || '')[x] && over[y][x] !== '.') n++; }));
+    return n;
+  },
   analyser(soknad, innst = this.innst()) {
-    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrs]/.test(r)));
+    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrst]/.test(r)));
     const antEtg = etg.length;
     const bredde = (soknad.etasjer && soknad.etasjer[0] && soknad.etasjer[0][0] || '').length;
     const dybde = soknad.etasjer && soknad.etasjer[0] ? soknad.etasjer[0].length : 0;
     const tell = (e, re) => e.reduce((s, r) => s + (r.match(re) || []).length, 0);
     const forste = etg[0] || [];
-    const bebygd = tell(forste, /[vdwrs]/g);
+    const bebygd = tell(forste, /[vdwrst]/g);
     const tomtAreal = bredde * dybde;
     const maksBebygd = Math.floor(tomtAreal * innst.maksAndel);
 
@@ -109,11 +164,13 @@ const B = {
 
     // Estimat
     let material = 0, dorer = 0, ruter = 0;
-    etg.forEach(e => {
+    let innertrapper = 0;
+    etg.forEach((e, i) => {
       const V = tell(e, /v/g), D = tell(e, /d/g), W = tell(e, /w/g);
       material += V * vegghoyde + (D + W) * Math.max(0, vegghoyde - 2);
-      material += tell(e, /[vdwrs]/g); // gulv
-      dorer += D; ruter += W * 2;
+      material += tell(e, /[vdwrst]/g); // gulv
+      if (i > 0) material -= this.hullOverTrapp(etg[i - 1], e); // hull i gulvet over trappa
+      dorer += D; ruter += W * 2; innertrapper += tell(e, /t/g);
     });
     let taktrapper = 0;
     if (antEtg) {
@@ -123,7 +180,7 @@ const B = {
         if (kort % 2 === 1) material += lang; // mønerad
         for (let k = 1; k < Math.ceil(kort / 2); k++) material += 2 * Math.max(0, kort - 2 * k); // gavler
       } else {
-        material += tell(topp, /[vdwrs]/g); // flatt tak
+        material += tell(topp, /[vdwrst]/g); // flatt tak
       }
     }
     const stacks = Math.ceil(material / 64);
@@ -160,16 +217,23 @@ const B = {
     // Etasjer over må stå på noe
     let svevende = 0;
     for (let i = 1; i < antEtg; i++) etg[i].forEach((r, y) => [...r].forEach((c, x) => { if (c !== '.' && (etg[i - 1][y] || '')[x] === '.') svevende++; }));
+    // Trapp mellom etasjene
+    for (let i = 0; i < antEtg - 1; i++) {
+      const lengst = this.lengsteTrapp(etg[i]);
+      legg(lengst >= innst.etasjeHoyde, lengst >= innst.etasjeHoyde ? `Trapp fra ${i + 1}. til ${i + 2}. etasje`
+        : `Trapp fra ${i + 1}. til ${i + 2}. etasje mangler (minst ${innst.etasjeHoyde} trappruter på rad${lengst ? `, dere har ${lengst}` : ''})`);
+    }
+    if (antEtg && tell(etg[antEtg - 1], /t/g)) legg(false, antEtg === 1 ? 'Huset har bare én etasje – fjern trappa' : 'Trapp i øverste etasje fører ingen steder – fjern den');
     if (antEtg > 1) legg(svevende === 0, svevende ? `${svevende} ruter i etasjen over står ikke på noe` : 'Etasjene står oppå hverandre');
 
     const kat = this.katalog();
     const pris = id => (kat.find(v => v.id === id) || { pris: 0 }).pris;
     const trappId = TAKTRAPP[soknad.materiale] || 'eiketrapp';
-    const kostnad = stacks * pris(soknad.materiale) + dorer * pris('eikedor') + ruter * pris('glassrute') + taktrapper * pris(trappId);
+    const kostnad = stacks * pris(soknad.materiale) + dorer * pris('eikedor') + ruter * pris('glassrute') + (taktrapper + innertrapper) * pris(trappId);
 
     return {
       antEtg, bredde, dybde, bebygd, maksBebygd, hoyde, takHoyde, sjekker, ok: sjekker.every(s => s.ok),
-      estimat: { material, stacks, dorer, ruter, taktrapper, trappId, kostnad }
+      estimat: { material, stacks, dorer, ruter, taktrapper, innertrapper, trappId, kostnad }
     };
   },
 
@@ -223,7 +287,7 @@ const B = {
 /* ---------- Små UI-hjelpere ---------- */
 const UI = {
   merke(status) {
-    const t = { utkast: 'Utkast', sendt: 'Venter', godkjent: 'Godkjent', levert: 'Levert', avvist: 'Avvist', samler: 'Samler støtte', klar: 'Klar til avstemming', vedtatt: 'Vedtatt', forkastet: 'Forkastet' }[status] || status;
+    const t = { utkast: 'Utkast', sendt: 'Venter', godkjent: 'Godkjent', levert: 'Levert', avvist: 'Avvist', samler: 'Samler støtte', betalt: 'Betalt', refundert: 'Refundert', ferdig: 'Ferdigattest', klar: 'Klar til avstemming', vedtatt: 'Vedtatt', forkastet: 'Forkastet' }[status] || status;
     return `<span class="merke m-${status}">${t}</span>`;
   },
   tom: tekst => `<div class="tom">${tekst}</div>`,
@@ -243,11 +307,12 @@ const UI = {
   planSvg(rader, celle = 18) {
     if (!rader || !rader.length) return '';
     const b = rader[0].length, d = rader.length;
-    const F = { v: '#7a5230', d: '#c98a3d', w: '#7ec8e3', r: '#f3ead6', s: '#d9c8f0' };
+    const F = { v: '#7a5230', d: '#c98a3d', w: '#7ec8e3', r: '#f3ead6', s: '#d9c8f0', t: '#e07a5f' };
     let r = `<svg class="plan" viewBox="0 0 ${b * celle} ${d * celle}" width="${b * celle}" height="${d * celle}">`;
     r += `<rect width="${b * celle}" height="${d * celle}" fill="#e3efd3"/>`;
     rader.forEach((rad, y) => [...rad].forEach((c, x) => {
       if (c !== '.') r += `<rect x="${x * celle}" y="${y * celle}" width="${celle}" height="${celle}" fill="${F[c]}"/>`;
+      if (c === 't') r += `<text x="${(x + .5) * celle}" y="${(y + .5) * celle}" font-size="${celle * .55}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="700">${B.trappTrinn(rader, x, y)}</text>`;
     }));
     for (let i = 0; i <= b; i++) r += `<line x1="${i * celle}" y1="0" x2="${i * celle}" y2="${d * celle}" stroke="#00000014"/>`;
     for (let i = 0; i <= d; i++) r += `<line x1="0" y1="${i * celle}" x2="${b * celle}" y2="${i * celle}" stroke="#00000014"/>`;
@@ -271,7 +336,7 @@ const UI = {
   },
   /* Fasade sett fra én side: 'sor' (forfra), 'ost', 'nord', 'vest' */
   fasadeSvg(soknad, innst, celle = 14, side = 'sor') {
-    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrs]/.test(r))).map(e => this.roter(e, side));
+    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrst]/.test(r))).map(e => this.roter(e, side));
     if (!etg.length) return '';
     const b = etg[0][0].length, vh = innst.etasjeHoyde - 1;
     const skratt = soknad.tak === 'skratt';
@@ -326,13 +391,14 @@ const UI = {
      3D-VISNING (three.js lastes ved behov)
      ========================================================= */
   voksler(soknad, innst) {
-    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrs]/.test(r)));
+    const etg = (soknad.etasjer || []).filter(e => e && e.some(r => /[vdwrst]/.test(r)));
     const vh = innst.etasjeHoyde - 1, v = [];
     etg.forEach((e, f) => {
       const base = f * innst.etasjeHoyde;
       e.forEach((rad, z) => [...rad].forEach((c, x) => {
         if (c === '.') return;
-        v.push({ x, y: base, z, t: 'gulv' });
+        if (!(f > 0 && etg[f - 1][z][x] === 't')) v.push({ x, y: base, z, t: 'gulv' });
+        if (c === 't') v.push({ x, y: base + Math.min(B.trappTrinn(e, x, z), innst.etasjeHoyde), z, t: 'trapp' });
         if (c === 'v' || c === 'd' || c === 'w') for (let h = 1; h <= vh; h++) {
           let t = 'vegg';
           if (c === 'd' && h <= 2) t = 'dor';
@@ -407,7 +473,7 @@ const UI = {
       dor: new T.MeshLambertMaterial({ color: '#6b4a2b' }), glass: new T.MeshLambertMaterial({ color: '#9fd6ea', transparent: true, opacity: 0.45 }),
       tak: new T.MeshLambertMaterial({ color: '#4a4a52' })
     };
-    mat.gavl = mat.vegg;
+    mat.gavl = mat.vegg; mat.trapp = new T.MeshLambertMaterial({ color: '#c0603f' });
     const geo = new T.BoxGeometry(1, 1, 1), tak = [];
     const v = this.voksler(soknad, innst);
     const per = {}; v.forEach(b => (per[b.t] = per[b.t] || []).push(b));

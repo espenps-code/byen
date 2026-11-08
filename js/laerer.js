@@ -20,8 +20,8 @@ const Laerer = {
     } else if (!this.inne) return this.tegnInnlogging();
     const sider = {
       oversikt: 'sideOversikt', soknader: 'sideSoknader', bestillinger: 'sideBestillinger', levering: 'sideLevering',
-      bank: 'sideBank', uke: 'sideUke', post: 'sidePost', hendelser: 'sideHendelser', lotto: 'sideLotto',
-      jobber: 'sideJobber', bystyre: 'sideBystyre', kontoer: 'sideKontoer', katalog: 'sideKatalog', innstillinger: 'sideInnstillinger', laereplan: 'sideLaereplan'
+      bank: 'sideBank', uke: 'sideUke', post: 'sidePost', hendelser: 'sideHendelser',
+      jobber: 'sideJobber', butikker: 'sideButikker', bystyre: 'sideBystyre', kontoer: 'sideKontoer', katalog: 'sideKatalog', innstillinger: 'sideInnstillinger', laereplan: 'sideLaereplan'
     };
     $('#rot').innerHTML = `<div class="app"><nav class="meny" id="lMeny"></nav><main class="innhold">${this[sider[this.side] || 'sideOversikt']()}</main></div>`;
     this.tegnMeny();
@@ -33,8 +33,7 @@ const Laerer = {
     return {
       soknader: liste(Store.hent('soknader')).filter(s => s.status === 'sendt').length,
       bestillinger: best.filter(b => b.status === 'sendt').length,
-      levering: best.filter(b => b.status === 'godkjent').length + liste(Store.hent('smaragd')).filter(s => s.status === 'godkjent' && s.type === 'uttak').length,
-      bank: liste(Store.hent('smaragd')).filter(s => s.status === 'sendt').length,
+      levering: best.filter(b => b.status === 'godkjent').length,
       jobber: Object.keys(Store.hent('jobbsoknader') || {}).filter(n => !(Store.hent('ansettelser') || {})[n]).length,
       bystyre: liste(Store.hent('forslag')).filter(f => f.status === 'samler' && Object.keys(f.stotte || {}).length >= 2).length
     };
@@ -48,8 +47,8 @@ const Laerer = {
       <div class="skille"></div>
       ${p('soknader', '📐', 'Byggesøknader')}${p('bestillinger', '📥', 'Bestillinger')}${p('levering', '🚚', 'Leveringssentral')}${p('bank', '🏦', 'Bank')}
       <div class="skille"></div>
-      ${p('uke', '📅', 'Ukeoppgjør')}${p('post', '✉️', 'Post og tilbud')}${p('hendelser', '🎲', 'Hendelser')}${p('lotto', '🎱', 'Lotto')}
-      ${p('jobber', '💼', 'Jobber og bedrifter')}${p('bystyre', '🏛️', 'Bystyret')}
+      ${p('uke', '📅', 'Ukeoppgjør')}${p('post', '✉️', 'Post og tilbud')}${p('hendelser', '🎲', 'Hendelser')}
+      ${p('jobber', '💼', 'Jobber og bedrifter')}${p('butikker', '🏪', 'Byens butikker')}${p('bystyre', '🏛️', 'Bystyret')}
       <div class="skille"></div>
       ${p('kontoer', '🏠', 'Husholdninger')}${p('katalog', '📋', 'Varekatalog')}${p('innstillinger', '⚙️', 'Innstillinger')}
       ${p('laereplan', '🎯', 'Læreplanmål')}
@@ -161,14 +160,14 @@ const Laerer = {
     return `<div class="sidetittel"><h1>Oversikt</h1></div>${start}${!hh.length || !hh.some(k => k.avtale && k.avtale.signert) ? this.delKort() : ''}
       <div class="rutenett" style="margin-bottom:18px">
         ${stat(v.soknader, 'Byggesøknader venter', 'soknader', 1)}${stat(v.bestillinger, 'Bestillinger venter', 'bestillinger', 1)}
-        ${stat(v.levering, 'Klar til levering', 'levering', 1)}${stat(v.bank, 'Smaragd-forespørsler', 'bank', 1)}
+        ${stat(v.levering, 'Klar til levering', 'levering', 1)}
         ${stat(v.jobber, 'Jobbsøknader uten svar', 'jobber', 1)}${stat(v.bystyre, 'Lovforslag klare', 'bystyre', 1)}
       </div>
       <div class="kort"><div class="rad mellom"><h2 style="margin:0">Husholdninger</h2><span class="dempet">Penger i byen: <b>${kr(totalt)}</b></span></div>
         ${hh.length ? `<div class="tabellboks"><table><tr><th>Tomt</th><th>Navn</th><th>Avtale</th><th>Byggesøknad</th><th class="tall">Saldo</th></tr>
           ${hh.map(k => { const s = Store.hent('soknader/' + k.id); return `<tr><td>${esc(k.tomt)}</td><td><b>${esc(k.navn)}</b><br><span class="dempet">${esc(B.medlemmer(k).join(', '))}</span></td>
-            <td>${k.avtale && k.avtale.signert ? `✓ <span class="dempet">${k.avtale.forsikring ? 'Forsikret' : 'Uforsikret'}${k.avtale.lotto ? ', lotto' : ''}</span>` : '<span class="dempet">Ikke signert</span>'}</td>
-            <td>${s ? UI.merke(s.status) : '<span class="dempet">–</span>'}</td><td class="tall">${kr(B.saldo(k.id))}</td></tr>`; }).join('')}
+            <td>${k.avtale && k.avtale.signert ? `✓ <span class="dempet">${k.avtale.forsikring ? 'Forsikret' : 'Uforsikret'}</span>` : '<span class="dempet">Ikke signert</span>'}</td>
+            <td>${s ? (s.ferdigTid ? UI.merke('ferdig') : UI.merke(s.status)) : '<span class="dempet">–</span>'}</td><td class="tall">${kr(B.saldo(k.id))}</td></tr>`; }).join('')}
           ${bed.map(k => `<tr><td>🏪</td><td><b>${esc(k.navn)}</b><br><span class="dempet">Bedrift</span></td><td></td><td></td><td class="tall">${kr(B.saldo(k.id))}</td></tr>`).join('')}
         </table></div>` : UI.tom('Ingen husholdninger ennå.')}
       </div>`;
@@ -184,9 +183,9 @@ const Laerer = {
     const ovrige = alle.filter(s => s.status !== 'sendt');
     const vis = s => {
       const a = B.analyser(s, I), e = a.estimat, el = s.elevEstimat || {}, mat = B.vare(s.materiale);
-      return `<div class="kort"><div class="rad mellom"><h2 style="margin:0">${esc(B.kontoNavn(s.id))}</h2>${UI.merke(s.status)}</div>
+      return `<div class="kort"><div class="rad mellom"><h2 style="margin:0">${esc(B.kontoNavn(s.id))}</h2>${s.ferdigTid ? UI.merke('ferdig') : UI.merke(s.status)}</div>
         <div class="tegninger" style="margin:12px 0">
-          ${s.etasjer.map((e2, i) => e2 && e2.some(r => /[vdwrs]/.test(r)) ? `<figure>${UI.planSvg(e2, 14)}<figcaption>${i + 1}. etasje</figcaption></figure>` : '').join('')}
+          ${s.etasjer.map((e2, i) => e2 && e2.some(r => /[vdwrst]/.test(r)) ? `<figure>${UI.planSvg(e2, 14)}<figcaption>${i + 1}. etasje</figcaption></figure>` : '').join('')}
         </div>
         ${UI.fasadeVelger(s, I, this.fasadeSide, 'Laerer.settFasade', 10)}
         <p style="margin:10px 0"><button class="bla sma" onclick="UI.vis3d(Store.hent('soknader/${s.id}'), B.innst(), '${esc(B.kontoNavn(s.id)).replace(/'/g, '')}')">Se huset i 3D</button></p>
@@ -197,25 +196,166 @@ const Laerer = {
             <tr><td>Stacks</td><td class="tall">${el.stacks ?? '–'}</td><td class="tall">${e.stacks}</td></tr>
             <tr><td>Dører</td><td class="tall">${el.dorer ?? '–'}</td><td class="tall">${e.dorer}</td></tr>
             <tr><td>Glassruter</td><td class="tall">${el.ruter ?? '–'}</td><td class="tall">${e.ruter}</td></tr>
+            ${e.innertrapper ? `<tr><td>Trapper inne</td><td class="tall">${el.innertrapper ?? '–'}</td><td class="tall">${e.innertrapper}</td></tr>` : ''}
             ${s.tak === 'skratt' ? `<tr><td>Taktrapper</td><td class="tall">${el.trapper ?? '–'}</td><td class="tall">${e.taktrapper}</td></tr>` : ''}
           </table>${el.forklaring ? `<p class="dempet" style="margin-top:8px">«${esc(el.forklaring)}»</p>` : ''}</div>
         </div>
         ${s.status === 'sendt' ? `<div class="rad" style="margin-top:12px"><input id="sm_${s.id}" placeholder="Melding til elevene (valgfritt)" style="flex:1;min-width:220px">
           <button onclick="Laerer.behandleSoknad('${s.id}','godkjent')">✓ Godkjenn</button><button class="rod" onclick="Laerer.behandleSoknad('${s.id}','avvist')">✗ Ikke godkjent</button></div>`
-          : s.status === 'godkjent' ? `<p style="margin-top:10px"><button class="sek sma" onclick="Laerer.behandleSoknad('${s.id}','avvist')">Trekk tilbake godkjenningen</button></p>` : ''}
+          : s.status === 'godkjent' ? `<p class="rad" style="margin-top:10px"><button class="sma sek" onclick="Laerer.skrivUtTegning(['${s.id}'])">🖨️ Skriv ut tegning</button>
+              ${s.ferdigTid ? `<span class="merke m-levert">🏠 Ferdigattest ${dato(s.ferdigTid)}</span><button class="sma sek" onclick="Laerer.skrivUtFerdigattest('${s.id}')">🖨️ Skriv ut ferdigattest</button>`
+                : `<button class="sma" onclick="Laerer.giFerdigattest('${s.id}')">🏠 Gi ferdigattest</button>`}
+              <button class="sek sma" onclick="Laerer.behandleSoknad('${s.id}','avvist')">Trekk tilbake godkjenningen</button></p>` : ''}
       </div>`;
     };
-    return `<div class="sidetittel"><h1>Byggesøknader</h1></div>
+    const godkjente = alle.filter(s => s.status === 'godkjent');
+    return `<div class="sidetittel"><div class="rad mellom"><h1>Byggesøknader</h1>${godkjente.length ? `<button class="sek" onclick="Laerer.skrivUtTegning(${esc(JSON.stringify(godkjente.map(s => s.id)))})">🖨️ Skriv ut alle godkjente (${godkjente.length})</button>` : ''}</div></div>
       ${venter.length ? venter.map(vis).join('') : `<div class="kort">${UI.tom('Ingen søknader venter.')}</div>`}
       ${ovrige.length ? `<h3>Andre søknader</h3>${ovrige.map(vis).join('')}` : ''}`;
   },
   async behandleSoknad(id, status) {
     const m = $('#sm_' + id) ? $('#sm_' + id).value.trim() : '';
     if (status === 'avvist' && !m && !confirm('Sende uten å forklare hva som må rettes?')) return;
-    await Store.oppdater('soknader/' + id, { status, melding: m });
+    await Store.oppdater('soknader/' + id, { status, melding: m, godkjentTid: status === 'godkjent' ? Date.now() : null, ferdigTid: null });
     await B.post_ny(id, { type: 'brev', tittel: status === 'godkjent' ? 'Byggesøknaden er godkjent!' : 'Byggesøknaden ble ikke godkjent',
       tekst: (status === 'godkjent' ? 'Gratulerer! Dere kan nå bestille materialer og begynne å bygge. Husk å bygge slik dere har tegnet.' : 'Søknaden må rettes før den kan godkjennes.') + (m ? '\n\nMelding fra Bysjefen: ' + m : ''), fra: 'Kommunen' });
     UI.toast(status === 'godkjent' ? 'Godkjent' : 'Sendt tilbake');
+  },
+
+  async giFerdigattest(id) {
+    const I = B.innst(), bonus = Number(I.ferdigBonus) || 0;
+    if (!confirm(`Har du sjekket huset i Minecraft, og er det bygget slik det er tegnet?\n\n${B.kontoNavn(id)} får ferdigattest${bonus ? ` og ${kr(bonus)} i innflyttingsbonus` : ''}.`)) return;
+    await Store.sett(`soknader/${id}/ferdigTid`, Date.now());
+    if (bonus) await B.trans_ny(id, bonus, 'Innflyttingsbonus (ferdigattest)', 'premie');
+    await B.post_ny(id, { type: 'ferdigattest', tittel: 'Gratulerer – huset har fått ferdigattest! 🏠', fra: 'Kommunen',
+      tekst: `Bysjefen har kontrollert huset og ser at det er bygget slik det er tegnet. Dere har nå ferdigattest og kan flytte inn!${bonus ? `\n\nSom takk for godt arbeid får dere ${kr(bonus)} i innflyttingsbonus. Husk å føre det i regnskapet!` : ''}\n\nVil dere bygge ut senere, må dere sende ny byggesøknad.` });
+    UI.toast('Ferdigattest gitt');
+  },
+  skrivUtFerdigattest(id) {
+    const s = Store.hent('soknader/' + id), k = B.konto(id) || {}, I = B.innst();
+    if (!s || !s.ferdigTid) return;
+    const dag = new Date(s.ferdigTid).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+    const etg = (s.etasjer || []).filter(e => e && e.some(r => /[vdwrst]/.test(r))).length;
+    const w = window.open('', '_blank');
+    if (!w) return UI.toast('Nettleseren blokkerte utskriftsvinduet – tillat popup-vinduer for siden');
+    w.document.write(`<!DOCTYPE html><html lang="no"><head><meta charset="utf-8"><title>Ferdigattest</title>
+      <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap" rel="stylesheet">
+      <style>@page{size:A4;margin:12mm}body{font-family:'Atkinson Hyperlegible',sans-serif;margin:0;color:#222}
+      .side{position:relative;width:186mm;min-height:268mm;margin:0 auto;border:10px double #4f8a2b;padding:18mm;box-sizing:border-box;text-align:center}
+      .by{font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:#7a5230;font-weight:700}
+      h1{font-family:'Lilita One',sans-serif;font-weight:400;font-size:64px;color:#35611a;margin:10px 0 6px}
+      h2{font-family:'Lilita One',sans-serif;font-weight:400;font-size:38px;margin:28px 0 4px}
+      .medl{font-size:20px}.tekst{font-size:20px;line-height:1.5;max-width:140mm;margin:26px auto}
+      .plan{margin:20px auto;max-width:120mm}.plan svg{width:100%;height:auto}
+      .fakta{display:flex;justify-content:center;gap:26px;font-size:17px;color:#444;margin:14px 0}
+      .sign{margin-top:46px;display:flex;justify-content:space-around}.sign div{border-top:1px solid #333;width:38%;padding-top:6px;font-size:16px}
+      .stempel{position:absolute;right:14mm;bottom:7mm;transform:rotate(-12deg);color:#c62828;border:5px solid #c62828;outline:2px solid #c62828;outline-offset:3px;border-radius:10px;padding:6px 16px;opacity:.85}
+      .stempel .s1{font-family:'Lilita One',sans-serif;font-size:30px;letter-spacing:.1em;white-space:nowrap}.stempel .s2{font-size:13px;font-weight:700}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+      <div class="side"><div class="by">${esc(I.byNavn || 'Klassebyen')} kommune</div><h1>Ferdigattest</h1>
+        <div class="tekst">Kommunen bekrefter at huset på</div>
+        <h2>Tomt ${esc(k.tomt ?? '')} – ${esc(k.navn || '')}</h2><div class="medl">${esc(B.medlemmer(k).join(', '))}</div>
+        <div class="fakta"><span>${etg} etasje${etg === 1 ? '' : 'r'}</span><span>Tak: ${s.tak === 'skratt' ? 'skrått' : 'flatt'}</span><span>Materiale: ${esc((B.vare(s.materiale) || {}).navn || '–')}</span></div>
+        <div class="plan">${(s.etasjer || []).find(e => e && e.some(r => /[vdwrst]/.test(r))) ? UI.planSvg((s.etasjer || []).find(e => e && e.some(r => /[vdwrst]/.test(r))), 16) : ''}</div>
+        <div class="tekst">er bygget i samsvar med den godkjente byggetegningen, og at huset er klart til innflytting.</div>
+        <div class="sign"><div>${dag}</div><div>Bysjefen</div></div>
+        <div class="stempel"><div class="s1">FERDIG</div><div class="s2">${dag}</div></div>
+      </div><script>document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);
+    w.document.close();
+  },
+  /* Byggeark for utskrift: plantegninger med nummererte ruter, fasader og godkjentstempel */
+  skrivUtTegning(ids) {
+    const I = B.innst();
+    const F = { v: '#7a5230', d: '#c98a3d', w: '#7ec8e3', r: '#f3ead6', s: '#d9c8f0', t: '#e07a5f' };
+    const harInnhold = e => e && e.some(r => /[vdwrst]/.test(r));
+    // Plantegning med tall langs kantene, så elevene kan telle klosser
+    const plan = (rader, under) => {
+      const b = rader[0].length, d = rader.length, c = 20, m = c;
+      const hver = Math.max(b, d) > 30 ? 5 : 1;
+      let r = `<svg viewBox="0 0 ${b * c + m + 4} ${d * c + m + 4}" class="plan" xmlns="http://www.w3.org/2000/svg">`;
+      r += `<g transform="translate(${m},${m})"><rect width="${b * c}" height="${d * c}" fill="#eef5e6"/>`;
+      rader.forEach((rad, y) => [...rad].forEach((ch, x) => {
+        if (ch !== '.') r += `<rect x="${x * c}" y="${y * c}" width="${c}" height="${c}" fill="${F[ch] || '#ccc'}"/>`;
+        if (ch === 't') r += `<text x="${x * c + c / 2}" y="${y * c + c / 2 + 4}" font-size="11" text-anchor="middle" fill="#fff" font-weight="700">${B.trappTrinn(rader, x, y)}</text>`;
+      }));
+      for (let i = 0; i <= b; i++) r += `<line x1="${i * c}" y1="0" x2="${i * c}" y2="${d * c}" stroke="${i % 5 ? '#0000002a' : '#00000066'}" stroke-width="${i % 5 ? 0.6 : 1.2}"/>`;
+      for (let i = 0; i <= d; i++) r += `<line x1="0" y1="${i * c}" x2="${b * c}" y2="${i * c}" stroke="${i % 5 ? '#0000002a' : '#00000066'}" stroke-width="${i % 5 ? 0.6 : 1.2}"/>`;
+      if (under) under.forEach((rad, y) => [...rad].forEach((ch, x) => { if (ch === 't') r += `<rect x="${x * c + 2}" y="${y * c + 2}" width="${c - 4}" height="${c - 4}" fill="#ffffffaa" stroke="#c0603f" stroke-width="2" stroke-dasharray="4 3"/>`; }));
+      r += '</g>';
+      for (let x = 0; x < b; x++) if ((x + 1) % hver === 0 || x === 0) r += `<text x="${m + x * c + c / 2}" y="${m - 6}" font-size="10" text-anchor="middle" fill="#555">${x + 1}</text>`;
+      for (let y = 0; y < d; y++) if ((y + 1) % hver === 0 || y === 0) r += `<text x="${m - 4}" y="${m + y * c + c / 2 + 4}" font-size="10" text-anchor="end" fill="#555">${y + 1}</text>`;
+      return r + '</svg>';
+    };
+    const fasade = (s, side) => UI.fasadeSvg(s, I, 14, side).replace(/ width="\d+" height="\d+"/, '');
+    const stempel = t => `<div class="stempel"><div class="s1">GODKJENT</div><div class="s2">${new Date(t).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' })}</div><div class="s3">${esc(I.byNavn || 'Klassebyen')} kommune · Bysjefen</div></div>`;
+    const ark = id => {
+      const s = Store.hent('soknader/' + id); if (!s) return '';
+      const k = B.konto(id) || {}, a = B.analyser(s, I), e = a.estimat, mat = B.vare(s.materiale);
+      const etg = (s.etasjer || []).map((e2, i) => ({ e2, i })).filter(x => harInnhold(x.e2));
+      const medl = B.medlemmer(k);
+      return `<section class="side">
+        ${stempel(s.godkjentTid || Date.now())}
+        <header><div class="by">${esc(I.byNavn || 'Klassebyen')} · Byggetillatelse</div>
+          <h1>${esc(k.type === 'hh' ? 'Tomt ' + k.tomt + ' – ' + k.navn : (k.navn || ''))}</h1>
+          ${medl.length ? `<div class="medl">${esc(medl.join(', '))}</div>` : ''}</header>
+        <div class="fakta"><span>Materiale: <b>${esc(mat ? mat.navn : '–')}</b></span><span>Tak: <b>${s.tak === 'skratt' ? 'skrått' : 'flatt'}</b></span>
+          <span>Etasjer: <b>${a.antEtg}</b></span><span>Høyde: <b>ca. ${a.hoyde} klosser</b></span></div>
+        <h2>Plantegning</h2>
+        <div class="planer ${etg.length > 1 ? 'flere' : ''}">${etg.map((x, j) => `<figure>${plan(x.e2, j > 0 ? etg[j - 1].e2 : null)}<figcaption>${x.i + 1}. etasje</figcaption></figure>`).join('')}</div>
+        <div class="forklaring"><span class="nord">↑ N</span>
+          ${[['v', 'Vegg'], ['d', 'Dør'], ['w', 'Vindu'], ['r', 'Rom'], ['s', 'Soverom'], ['t', 'Trapp (tallet = trinn nr.)']].map(([c, n]) => `<span><i style="background:${F[c]}"></i>${n}</span>`).join('')}${(s.etasjer || []).some(e2 => e2 && e2.some(r => r.includes('t'))) ? '<span><i style="border:2px dashed #c0603f;background:#fff"></i>Hull i gulvet</span>' : ''}
+          <span class="dempet">Tykke streker = hver 5. kloss</span></div>
+        <div class="liste"><b>Materialer (byens beregning):</b> ${e.stacks} stacks ${esc(mat ? mat.navn.toLowerCase() : '')} · ${e.dorer} ${e.dorer === 1 ? 'dør' : 'dører'} · ${e.ruter} glassruter${e.innertrapper ? ` · ${e.innertrapper} trapper inne` : ''}${s.tak === 'skratt' ? ` · ${e.taktrapper} taktrapper` : ''}</div>
+        ${e.innertrapper ? `<div class="liste"><b>Husk:</b> La det være hull i gulvet i etasjen over trappa, så dere kommer opp.</div>` : ''}
+        ${s.melding ? `<div class="melding"><b>Melding fra Bysjefen:</b> ${esc(s.melding)}</div>` : ''}
+      </section>
+      <section class="side">
+        <header><div class="by">${esc(I.byNavn || 'Klassebyen')} · Byggetillatelse</div><h1>Fasader – ${esc(k.navn || '')}</h1></header>
+        <div class="fasader">${[['sor', 'Forfra (sør)'], ['ost', 'Høyre side (øst)'], ['nord', 'Bakfra (nord)'], ['vest', 'Venstre side (vest)']]
+          .map(([sd, n]) => `<figure>${fasade(s, sd)}<figcaption>${n}</figcaption></figure>`).join('')}</div>
+        <p class="tips">Bygg slik dere har tegnet. Vil dere endre noe, må dere sende ny byggesøknad.</p>
+      </section>`;
+    };
+    const w = window.open('', '_blank');
+    if (!w) return UI.toast('Nettleseren blokkerte utskriftsvinduet – tillat popup-vinduer for siden');
+    w.document.write(`<!DOCTYPE html><html lang="no"><head><meta charset="utf-8"><title>Byggetegning</title>
+      <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap" rel="stylesheet">
+      <style>
+        @page { size: A4; margin: 12mm; }
+        body { font-family: 'Atkinson Hyperlegible', sans-serif; margin: 0; color: #222; background: #eee; }
+        .side { position: relative; width: 186mm; min-height: 268mm; margin: 10mm auto; padding: 8mm; box-sizing: border-box; background: #fff; page-break-after: always; break-after: page; }
+        header { border-bottom: 3px solid #7a5230; padding-bottom: 6px; margin-bottom: 10px; padding-right: 60mm; }
+        .by { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #7a5230; font-weight: 700; }
+        h1 { font-family: 'Lilita One', sans-serif; font-size: 32px; margin: 2px 0; font-weight: 400; }
+        h2 { font-family: 'Lilita One', sans-serif; font-weight: 400; font-size: 20px; margin: 12px 0 6px; }
+        .medl { font-size: 15px; }
+        .fakta { margin-right: 46mm; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; background: #f6f1e7; padding: 8px 12px; border-radius: 8px; }
+        .planer { display: grid; gap: 10px; }
+        .planer.flere { grid-template-columns: 1fr 1fr; }
+        figure { margin: 0; text-align: center; }
+        figcaption { font-weight: 700; margin-top: 4px; }
+        svg { width: 100%; height: auto; max-height: 150mm; display: block; }
+        .fasade { border-radius: 6px; }
+        .forklaring { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; margin: 10px 0; }
+        .forklaring i { display: inline-block; width: 13px; height: 13px; border: 1px solid #0003; vertical-align: -2px; margin-right: 4px; }
+        .nord { font-weight: 700; border: 2px solid #222; border-radius: 6px; padding: 0 6px; }
+        .dempet { color: #777; }
+        .liste, .melding { font-size: 14px; margin-top: 8px; padding: 8px 12px; border-left: 4px solid #4f8a2b; background: #f3f8ee; }
+        .melding { border-color: #c62828; background: #fdf1f1; }
+        .fasader { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+        .fasader svg { max-height: 95mm; }
+        .tips { margin-top: 16px; font-size: 14px; color: #555; text-align: center; }
+        .stempel { position: absolute; top: 2mm; right: 6mm; transform: rotate(-12deg); color: #c62828; border: 4px solid #c62828; outline: 2px solid #c62828; outline-offset: 3px;
+          border-radius: 10px; padding: 6px 14px; text-align: center; opacity: .85; mix-blend-mode: multiply; background: #fff0; }
+        .stempel .s1 { font-family: 'Lilita One', sans-serif; font-size: 30px; letter-spacing: .12em; line-height: 1; }
+        .stempel .s2 { font-weight: 700; font-size: 13px; margin-top: 3px; border-top: 2px solid #c62828; padding-top: 2px; }
+        .stempel .s3 { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+        @media print { body { background: none; } .side { margin: 0 auto; padding: 0; width: auto; min-height: 0; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style></head><body>
+      ${ids.map(ark).join('')}
+      <script>document.fonts.ready.then(()=>setTimeout(()=>print(),300))<\/script></body></html>`);
+    w.document.close();
   },
 
   /* =========================================================
@@ -255,28 +395,23 @@ const Laerer = {
      LEVERINGSSENTRAL
      ========================================================= */
   leveringer() {
-    const I = B.innst();
     const best = liste(Store.hent('bestillinger')).filter(b => b.status === 'godkjent');
-    const sm = liste(Store.hent('smaragd')).filter(s => s.status === 'godkjent' && s.type === 'uttak');
     const per = {};
-    best.forEach(b => { (per[b.kontoId] = per[b.kontoId] || { best: [], sm: [] }).best.push(b); });
-    sm.forEach(s => { (per[s.kontoId] = per[s.kontoId] || { best: [], sm: [] }).sm.push(s); });
+    best.forEach(b => { (per[b.kontoId] = per[b.kontoId] || { best: [] }).best.push(b); });
     return Object.entries(per).map(([id, g]) => {
       const konto = B.konto(id); if (!konto) return null;
       const ruter = g.best.flatMap(b => b.linjer.flatMap(l => B.ruterForLinje(l)));
-      const antSm = g.sm.reduce((s, x) => s + x.antall, 0);
-      for (let n = antSm; n > 0; n -= 64) ruter.push('emerald ' + Math.min(64, n));
-      return { konto, ...g, ruter, antSm, sum: g.best.reduce((s, b) => s + B.sumBestilling(b), 0) + antSm * I.smaragdVerdi };
+      return { konto, ...g, ruter, sum: g.best.reduce((s, b) => s + B.sumBestilling(b), 0) };
     }).filter(Boolean).sort((a, b) => (Number(a.konto.tomt) || 999) - (Number(b.konto.tomt) || 999));
   },
   sideLevering() {
     const L = this.leveringer();
     const mangler = L.filter(l => !B.harKoordinater(l.konto));
-    return `<div class="sidetittel"><h1>Leveringssentral</h1><p class="dempet">Godkjente bestillinger og smaragduttak samles i ett kisteprogram.</p></div>
+    return `<div class="sidetittel"><h1>Leveringssentral</h1><p class="dempet">Godkjente bestillinger samles i ett kisteprogram.</p></div>
       <div class="kort">
-        ${L.length ? `<div class="tabellboks"><table><tr><th>Konto</th><th>Kiste (x y z)</th><th class="tall">Varer</th><th class="tall">Smaragder</th><th class="tall">Ruter</th><th class="tall">Sum</th></tr>
+        ${L.length ? `<div class="tabellboks"><table><tr><th>Konto</th><th>Kiste (x y z)</th><th class="tall">Varer</th><th class="tall">Ruter</th><th class="tall">Sum</th></tr>
           ${L.map(l => `<tr><td>${esc(B.kontoNavn(l.konto.id))}</td><td>${B.harKoordinater(l.konto) ? `${l.konto.x} ${l.konto.y} ${l.konto.z}` : '<span class="merke m-avvist">Mangler</span>'}</td>
-            <td class="tall">${l.best.length} best.</td><td class="tall">${l.antSm || ''}</td><td class="tall">${l.ruter.length}${l.ruter.length > 54 ? ` (${Math.ceil(l.ruter.length / 54)} kister)` : ''}</td><td class="tall">${kr(l.sum)}</td></tr>`).join('')}</table></div>
+            <td class="tall">${l.best.length} best.</td><td class="tall">${l.ruter.length}${l.ruter.length > 54 ? ` (${Math.ceil(l.ruter.length / 54)} kister)` : ''}</td><td class="tall">${kr(l.sum)}</td></tr>`).join('')}</table></div>
           ${mangler.length ? '<div class="melding feil">Noen kontoer mangler kistekoordinater. Legg dem inn under Husholdninger (eller Jobber og bedrifter for bedrifter).</div>'
             : `<div class="melding info"><b>Før du leverer:</b> Elevene bør ha tømt kistene. Hver konto får en dobbeltkiste på (x, y, z) og (x+1, y, z) – begge rutene må være ledige. Trengs mer plass, kommer neste dobbeltkiste på x+3.</div>
                <p><button onclick="Laerer.visProgram()">Lag kisteprogram</button></p>`}`
@@ -322,10 +457,6 @@ const Laerer = {
         await B.post_ny(l.konto.id, { type: 'faktura', tittel: 'Faktura nr. ' + nr, nr, linjer, sum, fra: (I.byNavn || 'Byens') + ' byggevarehandel' });
         l.best.forEach(b => { e[`bestillinger/${b.id}/status`] = 'levert'; });
       }
-      if (l.antSm) {
-        await B.trans_ny(l.konto.id, -l.antSm * I.smaragdVerdi, `Uttak ${l.antSm} smaragder`, 'smaragd');
-        l.sm.forEach(s => { e[`smaragd/${s.id}/status`] = 'levert'; });
-      }
     }
     await Store.flere(e);
     UI.toast('Levert! Fakturaer er sendt.');
@@ -335,17 +466,24 @@ const Laerer = {
      BANK
      ========================================================= */
   sideBank() {
-    const I = B.innst(), sm = liste(Store.hent('smaragd')).sort((a, b) => b.tid - a.tid);
-    const venter = sm.filter(s => s.status === 'sendt');
     const k = this.valgtKonto ? B.konto(this.valgtKonto) : null;
+    const lover = liste(Store.hent('forslag')).filter(f => f.status === 'vedtatt').map(f => 'Brudd på vedtatt lov: ' + f.tekst);
+    const boter = liste(Store.hent('boter')).sort((a, b) => b.tid - a.tid);
     return `<div class="sidetittel"><h1>Bank</h1></div>
-      <div class="kort"><h2>Smaragd-forespørsler</h2>
-        ${venter.length ? `<table>${venter.map(s => `<tr><td>${datoTid(s.tid)}</td><td><b>${esc(B.kontoNavn(s.kontoId))}</b></td>
-          <td>${s.type === 'uttak' ? 'Vil ta ut' : 'Har satt inn'} <b>${s.antall}</b> smaragder (${kr(s.antall * I.smaragdVerdi)})</td>
-          <td class="tall"><button class="sma" onclick="Laerer.smaragd('${s.id}',true)">${s.type === 'uttak' ? 'Godkjenn' : 'Mottatt ✓'}</button> <button class="sma rod" onclick="Laerer.smaragd('${s.id}',false)">Avvis</button></td></tr>`).join('')}</table>
-          <p class="dempet liten">Godkjente uttak leveres sammen med neste kisteprogram. Innskudd godkjennes når du har sett smaragdene i kisten.</p>` : UI.tom('Ingen forespørsler.')}
+      <div class="kort"><h2>⚖️ Gi bot</h2><p class="dempet">Boten trekkes fra kontoen, og husholdningen får et brev fra Kommunen med regelen og begrunnelsen.</p>
+        <div class="rad" style="align-items:flex-end">
+          <div><label class="felt" for="botKonto">Hvem</label><select id="botKonto"><option value="">Velg …</option>${B.kontoer().map(k2 => `<option value="${k2.id}">${esc(B.kontoNavn(k2.id))}</option>`).join('')}</select></div>
+          <div style="flex:1;min-width:240px"><label class="felt" for="botRegel">Regel som er brutt</label><select id="botRegel" style="width:100%">${[...BOTREGLER, ...lover, 'Annet'].map(r => `<option>${esc(r)}</option>`).join('')}</select></div>
+          <div><label class="felt" for="botBelop">Beløp (kr)</label><input type="number" id="botBelop" min="1" value="500" style="width:110px"></div>
+        </div>
+        <label class="felt" for="botTekst">Begrunnelse (hva skjedde?)</label>
+        <input id="botTekst" style="width:100%" placeholder="F.eks.: Det er bygget en vegg inn på tomt 4.">
+        <p style="margin-top:12px"><button class="rod" onclick="Laerer.giBot()">Gi bot</button></p>
+        ${boter.length ? `<h3>Bøter som er gitt</h3><div class="tabellboks"><table><tr><th>Dato</th><th>Hvem</th><th>Regel</th><th class="tall">Beløp</th><th></th></tr>
+          ${boter.slice(0, 30).map(b => `<tr><td>${dato(b.tid)}</td><td>${esc(B.kontoNavn(b.kontoId))}</td><td>${esc(b.regel)}${b.tekst ? `<br><span class="dempet">${esc(b.tekst)}</span>` : ''}</td>
+            <td class="tall">${kr(b.belop)}</td><td>${b.trukketTilbake ? '<span class="dempet">Trukket tilbake</span>' : `<button class="sma sek" onclick="Laerer.trekkTilbakeBot('${b.id}')">Trekk tilbake</button>`}</td></tr>`).join('')}</table></div>` : ''}
       </div>
-      <div class="kort"><h2>Ny transaksjon</h2><p class="dempet">Premier, bøter, hagekonkurranse, salg i bedrifter …</p>
+      <div class="kort"><h2>Ny transaksjon</h2><p class="dempet">Premier, hagekonkurranse og andre beløp. Bøter gir du i boksen over.</p>
         <div class="rad"><select id="tKonto">${B.kontoer().map(k2 => `<option value="${k2.id}">${esc(B.kontoNavn(k2.id))}</option>`).join('')}</select>
           <input id="tTekst" placeholder="Tekst" style="flex:1;min-width:180px"><input type="number" id="tBelop" placeholder="+/- kr">
           <label class="liten"><input type="checkbox" id="tBrev" checked> Send brev</label>
@@ -357,13 +495,25 @@ const Laerer = {
           ${B.trans(k.id).slice().reverse().map(t => `<tr><td>${dato(t.tid)}</td><td>${esc(t.tekst)}</td><td class="tall ${t.belop < 0 ? 'minus' : 'pluss'}">${kr(t.belop)}</td></tr>`).join('')}</table></div>` : ''}
       </div>`;
   },
-  async smaragd(id, ok) {
-    const s = Store.hent('smaragd/' + id), I = B.innst();
-    if (!ok) { await Store.sett(`smaragd/${id}/status`, 'avvist'); return; }
-    if (s.type === 'innskudd') {
-      await B.trans_ny(s.kontoId, s.antall * I.smaragdVerdi, `Innskudd ${s.antall} smaragder`, 'smaragd');
-      await Store.sett(`smaragd/${id}/status`, 'levert');
-    } else await Store.sett(`smaragd/${id}/status`, 'godkjent');
+  async giBot() {
+    const kontoId = $('#botKonto').value, regel = $('#botRegel').value, belop = parseInt($('#botBelop').value), tekst = $('#botTekst').value.trim();
+    if (!kontoId) { UI.toast('Velg hvem som skal få boten.', 'feil'); return; }
+    if (!belop || belop < 1) { UI.toast('Skriv et beløp.', 'feil'); return; }
+    if (regel === 'Annet' && !tekst) { UI.toast('Skriv en begrunnelse når du velger «Annet».', 'feil'); return; }
+    if (!confirm(`Gi ${B.kontoNavn(kontoId)} en bot på ${kr(belop)}?`)) return;
+    const id = await Store.leggTil('boter', { kontoId, regel, tekst, belop, tid: Date.now() });
+    await B.trans_ny(kontoId, -belop, 'Bot: ' + regel, 'bot', { botId: id });
+    await B.post_ny(kontoId, { type: 'bot', tittel: 'Dere har fått en bot', fra: 'Kommunen',
+      tekst: `Regel som er brutt: ${regel}${tekst ? '\nHva skjedde: ' + tekst : ''}\n\nBoten er på ${kr(belop)} og er trukket fra kontoen.\n\nHusk å føre det i regnskapet! Er dere uenige, kan dere snakke med Bysjefen.` });
+    UI.toast('Boten er gitt');
+  },
+  async trekkTilbakeBot(id) {
+    const b = Store.hent('boter/' + id);
+    if (!b || b.trukketTilbake || !confirm(`Trekke tilbake boten på ${kr(b.belop)}? Pengene settes inn igjen.`)) return;
+    await Store.sett(`boter/${id}/trukketTilbake`, true);
+    await B.trans_ny(b.kontoId, b.belop, 'Bot trukket tilbake: ' + b.regel, 'bot', { botId: id });
+    await B.post_ny(b.kontoId, { type: 'brev', tittel: 'Boten er trukket tilbake', fra: 'Kommunen', tekst: `Boten for «${b.regel}» er trukket tilbake. ${kr(b.belop)} er satt inn på kontoen igjen.\n\nHusk å føre det i regnskapet!` });
+    UI.toast('Boten er trukket tilbake');
   },
   async nyTrans() {
     const id = $('#tKonto').value, tekst = $('#tTekst').value.trim(), belop = parseInt($('#tBelop').value);
@@ -387,22 +537,22 @@ const Laerer = {
       skatt, totalLonn, lonn, prosent,
       rader: hh.map(k => {
         const a = k.avtale || {};
-        const f = a.forsikring ? I.forsikringPerUke : 0, l = a.lotto ? I.lottoPerUke : 0;
+        const f = a.forsikring ? I.forsikringPerUke : 0;
         const inn = lonn.filter(x => x.kontoId === k.id).reduce((s, x) => s + x.sum, 0);
         const sk = prosent ? Math.round(inn * I.skattProsent / 100) : skatt;
-        return { k, forsikring: f, lotto: l, lonn: inn, skatt: sk, netto: inn - f - l - sk };
+        return { k, forsikring: f, lonn: inn, skatt: sk, netto: inn - f - sk };
       })
     };
   },
   sideUke() {
     const u = this.beregnUke(), sist = liste(Store.hent('logg/uke')).sort((a, b) => b.tid - a.tid)[0];
-    return `<div class="sidetittel"><h1>Ukeoppgjør</h1><p class="dempet">Kjøres én gang i uka: lønn fra byen, skatt, forsikring og lotto.</p></div>
+    return `<div class="sidetittel"><h1>Ukeoppgjør</h1><p class="dempet">Kjøres én gang i uka: lønn fra byen, skatt og forsikring.</p></div>
       ${sist ? `<div class="melding info">Forrige ukeoppgjør: ${datoTid(sist.tid)}</div>` : ''}
       <div class="kort">
         <p>Offentlige lønninger denne uka: <b>${kr(u.totalLonn)}</b> fordelt på ${u.lonn.length} ansatte.
           ${u.prosent ? `Skatten er <b>${B.innst().skattProsent} %</b> av lønnen (lønn fra bedrifter skattlegges når du fordeler overskudd).` : `Det deles på alle husholdningene som skatt: <b>${kr(u.skatt)}</b> hver.`}</p>
-        <div class="tabellboks"><table><tr><th>Husholdning</th><th class="tall">Lønn</th><th class="tall">Skatt</th><th class="tall">Forsikring</th><th class="tall">Lotto</th><th class="tall">Netto</th></tr>
-          ${u.rader.map(r => `<tr><td>${esc(B.kontoNavn(r.k.id))}</td><td class="tall pluss">${r.lonn ? kr(r.lonn) : ''}</td><td class="tall minus">${r.skatt ? kr(-r.skatt) : ''}</td><td class="tall minus">${r.forsikring ? kr(-r.forsikring) : ''}</td><td class="tall minus">${r.lotto ? kr(-r.lotto) : ''}</td><td class="tall"><b>${kr(r.netto)}</b></td></tr>`).join('')}
+        <div class="tabellboks"><table><tr><th>Husholdning</th><th class="tall">Lønn</th><th class="tall">Skatt</th><th class="tall">Forsikring</th><th class="tall">Netto</th></tr>
+          ${u.rader.map(r => `<tr><td>${esc(B.kontoNavn(r.k.id))}</td><td class="tall pluss">${r.lonn ? kr(r.lonn) : ''}</td><td class="tall minus">${r.skatt ? kr(-r.skatt) : ''}</td><td class="tall minus">${r.forsikring ? kr(-r.forsikring) : ''}</td><td class="tall"><b>${kr(r.netto)}</b></td></tr>`).join('')}
         </table></div>
         <p class="dempet liten" style="margin-top:8px">Bedrifter fordeler overskuddet sitt selv under «Jobber og bedrifter».</p>
         <p style="margin-top:12px"><button class="gul" onclick="Laerer.kjorUke()">Gjennomfør ukeoppgjøret</button></p>
@@ -420,8 +570,7 @@ const Laerer = {
     for (const r of u.rader) {
       if (r.skatt) await B.trans_ny(r.k.id, -r.skatt, u.prosent ? `Skatt (${B.innst().skattProsent} % av ${kr(r.lonn)})` : 'Skatt', 'skatt');
       if (r.forsikring) await B.trans_ny(r.k.id, -r.forsikring, 'Forsikring', 'forsikring');
-      if (r.lotto) await B.trans_ny(r.k.id, -r.lotto, 'Lotto', 'lotto');
-      const deler = [r.skatt && `Skatt: ${kr(r.skatt)}`, r.forsikring && `Forsikring: ${kr(r.forsikring)}`, r.lotto && `Lotto: ${kr(r.lotto)}`].filter(Boolean);
+      const deler = [r.skatt && `Skatt: ${kr(r.skatt)}`, r.forsikring && `Forsikring: ${kr(r.forsikring)}`].filter(Boolean);
       if (deler.length) await B.post_ny(r.k.id, { type: 'brev', tittel: 'Faste utgifter denne uka', tekst: 'Følgende er trukket fra kontoen:\n' + deler.join('\n') + '\n\nHusk å føre det i regnskapet!', fra: 'Banken' });
     }
     await Store.leggTil('logg/uke', { tid: Date.now(), skatt: u.skatt, lonn: u.totalLonn });
@@ -511,45 +660,6 @@ const Laerer = {
   },
 
   /* =========================================================
-     LOTTO
-     ========================================================= */
-  sideLotto() {
-    const I = B.innst(), deltakere = B.kontoer('hh').filter(k => k.avtale && k.avtale.lotto);
-    const trekninger = liste(Store.hent('lotto')).sort((a, b) => b.tid - a.tid);
-    return `<div class="sidetittel"><h1>Lotto</h1><p class="dempet">${kr(I.lottoPerUke)} per uke trekkes i ukeoppgjøret. Tre rette: ${kr(I.lottoPremie3)}${I.lottoPremie2 ? ` · to rette: ${kr(I.lottoPremie2)}` : ''}.</p></div>
-      <div class="kort"><div class="rad mellom"><h2 style="margin:0">Deltakere (${deltakere.length})</h2><button class="gul" onclick="Laerer.lottoTavle()" ${deltakere.length ? '' : 'disabled'}>🎱 Trekk på tavla</button></div>
-        ${deltakere.length ? `<table style="margin-top:10px">${deltakere.map(k => `<tr><td>${esc(B.kontoNavn(k.id))}</td><td class="tall"><b>${(k.avtale.tall || []).join(' – ')}</b></td></tr>`).join('')}</table>` : UI.tom('Ingen tipper lotto.')}</div>
-      <div class="kort"><h2>Tidligere trekninger</h2>${trekninger.length ? `<table>${trekninger.map(t => `<tr><td>${datoTid(t.tid)}</td><td><b>${t.tall.join(' – ')}</b></td><td>${(t.vinnere || []).length ? t.vinnere.map(v => esc(v.navn) + ' (' + v.rette + ' rette)').join(', ') : '<span class="dempet">Ingen vinnere</span>'}</td></tr>`).join('')}</table>` : UI.tom('Ingen trekninger ennå.')}</div>`;
-  },
-  lottoTavle() {
-    const el = document.createElement('div');
-    el.className = 'tavle'; el.id = 'tavle';
-    el.innerHTML = `<button class="sek lukk" onclick="document.getElementById('tavle').remove()">Lukk</button>
-      <h1>Ukens lottotrekning</h1><div class="baller"><div class="ball" id="b0">?</div><div class="ball" id="b1">?</div><div class="ball" id="b2">?</div></div>
-      <div id="lottoRes" class="vinnere"></div><p style="margin-top:20px"><button class="gul" id="trekkKnapp" onclick="Laerer.trekkLotto()">Trekk!</button></p>`;
-    document.body.appendChild(el);
-  },
-  async trekkLotto() {
-    $('#trekkKnapp').disabled = true;
-    const tall = [...Array(10).keys()].sort(() => Math.random() - .5).slice(0, 3);
-    for (let i = 0; i < 3; i++) {
-      const b = $('#b' + i); b.classList.add('ruller');
-      const t = setInterval(() => { b.textContent = Math.floor(Math.random() * 10); }, 70);
-      await new Promise(r => setTimeout(r, 1300));
-      clearInterval(t); b.classList.remove('ruller'); b.textContent = tall[i];
-    }
-    const I = B.innst(), vinnere = [];
-    for (const k of B.kontoer('hh').filter(k2 => k2.avtale && k2.avtale.lotto)) {
-      const rette = (k.avtale.tall || []).filter(t => tall.includes(t)).length;
-      const premie = rette === 3 ? I.lottoPremie3 : rette === 2 ? I.lottoPremie2 : 0;
-      if (premie) { vinnere.push({ kontoId: k.id, navn: k.navn, rette, premie }); await B.trans_ny(k.id, premie, `Lottogevinst (${rette} rette)`, 'premie'); }
-      await B.post_ny(k.id, { type: 'lotto', tittel: 'Lottotrekning', tekst: `Ukens tall ble ${tall.join(' – ')}. Dine tall: ${(k.avtale.tall || []).join(' – ')}. Du fikk ${rette} rette.${premie ? ` Gratulerer – ${kr(premie)} er satt inn på kontoen!` : ''}` });
-    }
-    await Store.leggTil('lotto', { tid: Date.now(), tall, vinnere });
-    $('#lottoRes').innerHTML = vinnere.length ? '🎉 ' + vinnere.map(v => `${esc(v.navn)}: ${v.rette} rette – ${kr(v.premie)}`).join('<br>') : 'Ingen vinnere denne uka. Bedre lykke neste gang!';
-  },
-
-  /* =========================================================
      JOBBER OG BEDRIFTER
      ========================================================= */
   sideJobber() {
@@ -574,7 +684,7 @@ const Laerer = {
             <td style="max-width:320px;white-space:pre-wrap;font-size:14px">${esc(s.argumenter)}</td>
             <td><select onchange="Laerer.ansett('${s.id}',this.value)"><option value="">–</option>${jobber.map(j => `<option value="${j.id}" ${ans[s.id] === j.id ? 'selected' : ''}>${esc(j.navn)}</option>`).join('')}</select></td></tr>`).join('')}</table></div>` : UI.tom('Ingen søknader ennå. Elevene søker under «Jobb».')}
       </div>
-      ${B.kontoer('bedrift').length ? `<div class="kort"><h2>Bedrifter</h2><p class="dempet">Når en bedrift har solgt for noe, fordeler du overskuddet på de ansatte. Bedriftene får inntekter når de setter inn smaragder i banken.</p>
+      ${B.kontoer('bedrift').length ? `<div class="kort"><h2>Bedrifter</h2><p class="dempet">Når en bedrift har solgt for noe, fordeler du overskuddet på de ansatte. Bedriftene får inntekter når kunder betaler i «Byens butikker».</p>
         <div class="tabellboks"><table><tr><th>Bedrift</th><th>Kiste (x y z)</th><th class="tall">Saldo</th><th>Fordel overskudd</th></tr>
         ${B.kontoer('bedrift').map(b => { const j = B.jobber().find(x => x.bedriftId === b.id), a = j ? B.ansatte(j.id) : []; return `<tr><td><b>${esc(b.navn)}</b><br><span class="dempet">${a.length} ansatte</span></td>
           <td><input style="width:60px" value="${esc(b.x ?? '')}" onchange="Store.sett('kontoer/${b.id}/x',this.value.trim())"> <input style="width:60px" value="${esc(b.y ?? '')}" onchange="Store.sett('kontoer/${b.id}/y',this.value.trim())"> <input style="width:60px" value="${esc(b.z ?? '')}" onchange="Store.sett('kontoer/${b.id}/z',this.value.trim())"></td>
@@ -631,6 +741,40 @@ const Laerer = {
       await B.post_ny(x.kontoId, { type: 'lonnsslipp', tittel: 'Lønnsslipp – ' + x.navn, navn: x.navn, jobb: j.navn, sum: hver, skatt });
     }
     UI.toast(`${kr(hver)} til hver av de ansatte`);
+  },
+
+  /* =========================================================
+     BYENS BUTIKKER (elevbedriftene)
+     ========================================================= */
+  sideButikker() {
+    const bed = B.kontoer('bedrift'), salg = B.kjop();
+    const btab = bed.map(b => {
+      const bt = B.butikk(b.id), v = B.butikkVarer(b.id), s = salg.filter(k => k.til === b.id && k.status !== 'refundert');
+      return `<tr><td><b>${esc(b.navn)}</b>${bt.beskrivelse ? `<br><span class="dempet">${esc(bt.beskrivelse)}</span>` : ''}</td>
+        <td>${bt.apen ? '<span class="pluss">Åpen</span>' : '<span class="dempet">Stengt</span>'}</td>
+        <td>${v.length ? v.map(x => `${esc(x.navn)} <span class="dempet">${kr(x.pris)}</span>${x.aktiv === false ? ' <span class="dempet">(skjult)</span>' : ''}`).join('<br>') : '<span class="dempet">Ingen varer</span>'}</td>
+        <td class="tall">${s.length}</td><td class="tall">${kr(s.reduce((n, k) => n + k.sum, 0))}</td>
+        <td>${bt.apen ? `<button class="sma sek" onclick="Store.sett('butikker/${b.id}/apen',false)">Steng</button>` : ''}</td></tr>`;
+    }).join('');
+    return `<div class="sidetittel"><h1>Byens butikker</h1><p class="dempet">Bedriftene legger inn varer og priser selv under «Min bedrift». Kundene betaler i portalen, og pengene går rett til bedriften.</p></div>
+      ${bed.length ? `<div class="kort"><h2>Bedriftene</h2><div class="tabellboks"><table><tr><th>Bedrift</th><th>Status</th><th>Varer og priser</th><th class="tall">Salg</th><th class="tall">Omsetning</th><th></th></tr>${btab}</table></div></div>`
+        : `<div class="kort">${UI.tom('Ingen bedrifter ennå. Opprett dem under «Jobber og bedrifter».')}</div>`}
+      <div class="kort"><h2>Alt salg</h2><p class="dempet">Har noe gått galt (feil vare, kjøpt ved et uhell), kan du refundere: pengene går tilbake til kunden og trekkes fra bedriften.</p>
+        ${B.kjopTabell(salg.slice(0, 100), 'laerer', k => k.status !== 'refundert' ? `<button class="sma sek" onclick="Laerer.refunder('${k.id}')">Refunder</button>` : '')}</div>`;
+  },
+  async refunder(id) {
+    const k = Store.hent('kjop/' + id);
+    if (!k || k.status === 'refundert') return;
+    if (!confirm(`Refundere ${kr(k.sum)} fra ${B.kontoNavn(k.til)} til ${B.kontoNavn(k.fra)}?`)) return;
+    const tid = Date.now(), varer = (k.linjer || []).map(l => `${l.antall}× ${l.navn}`).join(', '), fordeling = {};
+    (k.linjer || []).forEach(l => { const kat = l.kat || 'annet'; fordeling[kat] = (fordeling[kat] || 0) + l.antall * l.pris; });
+    await Store.flere({
+      [`kjop/${id}/status`]: 'refundert',
+      [`trans/${k.fra}/${id}_r`]: { tid, belop: k.sum, tekst: `Refusjon fra ${B.kontoNavn(k.til)}: ${varer}`, kat: 'refusjon', fordeling, kjopId: id },
+      [`trans/${k.til}/${id}_r`]: { tid, belop: -k.sum, tekst: `Refusjon til ${B.kontoNavn(k.fra)}: ${varer}`, kat: 'refusjon', kjopId: id }
+    });
+    await B.post_ny(k.fra, { type: 'brev', tittel: 'Pengene er betalt tilbake', tekst: `Kjøpet hos ${B.kontoNavn(k.til)} (${varer}) er refundert. ${kr(k.sum)} er satt inn på kontoen igjen.\n\nHusk å føre det i regnskapet!`, fra: 'Banken' });
+    UI.toast('Refundert');
   },
 
   /* =========================================================
@@ -794,15 +938,14 @@ const Laerer = {
         <tr><td><label for="i_skm">Skatt</label><div class="dempet liten">Prosent gir øving i prosentregning (matematikk 7. trinn)</div></td>
           <td><select id="i_skm" onchange="Laerer.settInnst('skatteModell',this.value)"><option value="fordelt" ${I.skatteModell !== 'prosent' ? 'selected' : ''}>Offentlige lønninger deles likt på alle</option><option value="prosent" ${I.skatteModell === 'prosent' ? 'selected' : ''}>Prosent av lønn</option></select></td></tr>
         ${I.skatteModell === 'prosent' ? tall('skattProsent', 'Skatteprosent (%)') : ''}
-        ${tall('forsikringPerUke', 'Forsikring per uke (kr)')}${tall('lottoPerUke', 'Lotto per uke (kr)')}
-        ${tall('lottoPremie3', 'Lottopremie, tre rette (kr)')}${tall('lottoPremie2', 'Lottopremie, to rette (kr)', '0 = ingen premie')}
-        ${tall('smaragdVerdi', 'Verdi av én smaragd (kr)')}
+        ${tall('forsikringPerUke', 'Forsikring per uke (kr)')}
+        ${tall('ferdigBonus', 'Innflyttingsbonus ved ferdigattest (kr)', '0 = ingen bonus')}
       </table></div>
       <div class="kort"><h2>Byggeregler</h2><table>
         ${tall('maksHoyde', 'Maks byggehøyde (blokker)')}${tall('etasjeHoyde', 'Høyde per etasje (blokker)', 'Inkludert gulv/tak. 4 = 3 blokker vegg + 1 gulv.')}
         <tr><td><label for="i_maksAndel">Maks bebygd del av tomten (%)</label></td><td><input type="number" id="i_maksAndel" value="${Math.round(I.maksAndel * 100)}" onchange="Laerer.settInnst('maksAndel',Number(this.value)/100)"></td></tr>
         ${tall('tomtBredde', 'Standard tomtebredde (ruter)')}${tall('tomtDybde', 'Standard tomtedybde (ruter)')}
-        <tr><td>Butikken åpner først når byggesøknaden er godkjent</td><td><input type="checkbox" ${I.kreverByggesoknad ? 'checked' : ''} onchange="Laerer.settInnst('kreverByggesoknad',this.checked)"></td></tr>
+        <tr><td>Byggevarehandelen åpner først når byggesøknaden er godkjent</td><td><input type="checkbox" ${I.kreverByggesoknad ? 'checked' : ''} onchange="Laerer.settInnst('kreverByggesoknad',this.checked)"></td></tr>
       </table></div>
       <div class="kort"><h2>Butikk og levering</h2><table>
         <tr><td>Vis summer i butikken<div class="dempet liten">Av = elevene må regne ut totalen selv (anbefalt)</div></td><td><input type="checkbox" ${I.visSummer ? 'checked' : ''} onchange="Laerer.settInnst('visSummer',this.checked)"></td></tr>

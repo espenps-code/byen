@@ -52,3 +52,18 @@ Hver konto får en **dobbeltkiste** på (x, y, z) og (x+1, y, z). Begge rutene m
 ## Egne bilder
 
 Under Lærer → Varekatalog kan du lime inn en bildeadresse per vare (f.eks. Higgsfield-bilder lagt i en mappe `bilder/`). Da brukes bildet i stedet for pikselikonet.
+
+## Byens butikker (elevbedrifter)
+
+Elever som jobber i en privat bedrift, får menyvalget **Min bedrift**. Der legger de inn varer og tjenester med pris, åpner og stenger butikken, og ser salg i sanntid. Alle husholdninger handler under **Byens butikker**, betaler i portalen og får en kvittering med en kode på fire tegn som de viser i Minecraft. Den ansatte trykker «Levert» når kunden har fått varen.
+
+Læreren ser alle butikker og alt salg under Lærer → Byens butikker, og kan refundere et kjøp.
+
+**Viktig:** Etter denne oppdateringen må `database.rules.json` limes inn på nytt i Firebase-konsollen (Realtime Database → Rules → Publish). Reglene sørger for at en elev bare kan sette inn penger på en bedrift når nøyaktig samme beløp trekkes fra kjøperen i samme kjøp.
+
+## Bøter og ferdigattest
+
+- **Bøter:** Lærer → Bank → «Gi bot». Velg husholdning, regel (standardregler pluss lovene bystyret har vedtatt) og beløp, og skriv hva som skjedde. Husholdningen får et brev fra Kommunen. En bot kan trekkes tilbake.
+- **Ferdigattest:** Lærer → Byggesøknader → «Gi ferdigattest» på en godkjent søknad når huset er bygget slik det er tegnet. Husholdningen får brev og innflyttingsbonus (endres under Innstillinger, 0 = ingen bonus), og du kan skrive ut et ferdigattest-diplom.
+
+Lotto er fjernet fra portalen.

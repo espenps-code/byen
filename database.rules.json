@@ -19,9 +19,6 @@
         "ansettelser": {
           ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
         },
-        "lotto": {
-          ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
-        },
         "teller": {
           ".write": "auth != null && root.child('byer/' + $by + '/laererUid').val() === auth.uid"
         },
@@ -39,17 +36,12 @@
         "trans": {
           "$konto": {
             "$t": {
-              ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('belop').isNumber() && newData.child('belop').val() < 0))"
+              ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('belop').isNumber() && newData.child('belop').val() < 0) || (!data.exists() && newData.child('belop').isNumber() && newData.child('belop').val() > 0 && root.child('byer/' + $by + '/kontoer/' + $konto + '/type').val() === 'bedrift' && !root.child('byer/' + $by + '/kjop/' + $t).exists() && newData.parent().parent().parent().child('kjop/' + $t + '/til').val() === $konto && newData.parent().parent().parent().child('kjop/' + $t + '/sum').val() === newData.child('belop').val() && newData.parent().parent().parent().child('kjop/' + $t + '/fra').val() !== $konto && newData.parent().parent().parent().child('trans/' + newData.parent().parent().parent().child('kjop/' + $t + '/fra').val() + '/' + $t + '/belop').val() === -newData.child('belop').val()))"
             }
           }
         },
         "bestillinger": {
           "$b": {
-            ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('status').val() === 'sendt'))"
-          }
-        },
-        "smaragd": {
-          "$s": {
             ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('status').val() === 'sendt'))"
           }
         },
@@ -88,6 +80,26 @@
         },
         "budsjett": {
           ".write": "auth != null"
+        },
+        "kjop": {
+          "$k": {
+            ".write": "auth != null && (root.child('byer/' + $by + '/laererUid').val() === auth.uid || (!data.exists() && newData.child('status').val() === 'betalt' && newData.child('sum').isNumber() && newData.child('sum').val() > 0 && newData.parent().parent().child('trans/' + newData.child('fra').val() + '/' + $k + '/belop').val() === -newData.child('sum').val() && newData.parent().parent().child('trans/' + newData.child('til').val() + '/' + $k + '/belop').val() === newData.child('sum').val()))",
+            "status": {
+              ".write": "auth != null && data.val() === 'betalt' && newData.val() === 'levert'"
+            }
+          }
+        },
+        "butikker": {
+          "$b": {
+            ".write": "auth != null && root.child('byer/' + $by + '/kontoer/' + $b + '/type').val() === 'bedrift'",
+            "varer": {
+              "$v": {
+                "pris": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+                }
+              }
+            }
+          }
         }
       }
     },
